@@ -17,10 +17,12 @@ export type VlmSettings = {
 	suggestOn : boolean
 }
 
-// DeepSeek V4.1 Flash：OpenRouter 上为 deepseek/deepseek-v4.1-flash，DeepSeek 官方接口上为 deepseek-flash（均支持图片输入）
+// DeepSeek V4.1 Flash：OpenRouter 上为 deepseek/deepseek-v4.1-flash，DeepSeek 官方接口上为 deepseek-flash，
+// 硅基流动上为 deepseek-ai/DeepSeek-V4.1-Flash（均支持图片输入）
 export const PRESETS : VlmPreset[] = [
 	{ id: 'openrouter', name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', model: 'deepseek/deepseek-v4.1-flash' } as VlmPreset,
 	{ id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com', model: 'deepseek-flash' } as VlmPreset,
+	{ id: 'siliconflow', name: '硅基流动', baseUrl: 'https://api.siliconflow.cn/v1', model: 'deepseek-ai/DeepSeek-V4.1-Flash' } as VlmPreset,
 	{ id: 'qwen', name: '通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-vl-max' } as VlmPreset,
 	{ id: 'zhipu', name: '智谱', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4v-plus' } as VlmPreset,
 	{ id: 'custom', name: '自定义', baseUrl: '', model: '' } as VlmPreset
@@ -81,18 +83,73 @@ export function isOpenRouter(base : string) : boolean {
 	return base.indexOf('openrouter.ai') >= 0
 }
 
-// 按供应商附加推理 / JSON 输出参数：识别（ocr）关闭推理求快，建议（suggest）用低强度推理
-export function applyProviderParams(body : UTSJSONObject, base : string, purpose : string) {
+export function isSiliconFlow(base : string) : boolean {
+	return base.indexOf('siliconflow') >= 0
+}
+
+// 按供应商附加推理 / JSON 输出参数，返回是否加了参数。purpose：
+//   'ocr'     识别：关闭推理求快，要求 JSON 输出
+//   'suggest' 建议：低强度推理，要求 JSON 输出
+//   'test'    测试连接：关闭推理，不要求 JSON
+export function applyProviderParams(body : UTSJSONObject, base : string, purpose : string) : boolean {
+	const think = purpose == 'suggest'
+	const json = purpose != 'test'
 	if (isDeepSeek(base)) {
-		if (purpose == 'ocr') body.set('thinking', { type: 'disabled' } as UTSJSONObject)
-		else body.set('thinking', { type: 'enabled', reasoning_effort: 'low' } as UTSJSONObject)
-		body.set('response_format', { type: 'json_object' } as UTSJSONObject)
-	} else if (isOpenRouter(base)) {
-		if (purpose == 'ocr') body.set('reasoning', { enabled: false } as UTSJSONObject)
-		else body.set('reasoning', { effort: 'low' } as UTSJSONObject)
-		body.set('response_format', { type: 'json_object' } as UTSJSONObject)
-		body.set('provider', openRouterRouting())
+		if (think) body.set('thinking', { type: 'enabled', reasoning_effort: 'low' } as UTSJSONObject)
+		else body.set('thinking', { type: 'disabled' } as UTSJSONObject)
+		if (json) body.set('response_format', { type: 'json_object' } as UTSJSONObject)
+		return true
 	}
+	if (isOpenRouter(base)) {
+		if (think) body.set('reasoning', { effort: 'low' } as UTSJSONObject)
+		else body.set('reasoning', { enabled: false } as UTSJSONObject)
+		if (json) body.set('response_format', { type: 'json_object' } as UTSJSONObject)
+		body.set('provider', openRouterRouting())
+		return true
+	}
+	if (isSiliconFlow(base)) {
+		// 硅基流动的混合推理模型用 enable_thinking 开关；JSON 输出并非所有模型都支持，靠提示词约束
+		body.set('enable_thinking', think)
+		if (think) body.set('thinking_budget', 1024)
+		return true
+	}
+	return false
+}
+
+export type ChatCb = (res : RequestSuccess<UTSJSONObject> | null, err : string) => void
+
+function sendChat(base : string, apiKey : string, body : UTSJSONObject, timeout : number, cb : ChatCb) {
+	uni.request<UTSJSONObject>({
+		url: vlmChatUrl(base),
+		method: 'POST',
+		header: providerHeaders(base, apiKey),
+		data: body,
+		timeout: timeout,
+		success: (res : RequestSuccess<UTSJSONObject>) => {
+			cb(res, '')
+		},
+		fail: (e : RequestFail) => {
+			cb(null, e.errMsg)
+		}
+	})
+}
+
+// 调用 /chat/completions：先带上供应商专有参数；若服务端因不认识某个参数返回 400 / 422，
+// 去掉这些参数自动重试一次（例如某个模型不支持推理开关或 JSON 输出）
+export function postChat(base : string, apiKey : string, body : UTSJSONObject, purpose : string, timeout : number, cb : ChatCb) {
+	const full = {} as UTSJSONObject
+	body.toMap().forEach((v : any | null, k : string) => {
+		full.set(k, v)
+	})
+	const added = applyProviderParams(full, base, purpose)
+	sendChat(base, apiKey, full, timeout, (res : RequestSuccess<UTSJSONObject> | null, err : string) => {
+		if (added && res != null && (res.statusCode == 400 || res.statusCode == 422)) {
+			console.log('provider params rejected, retry without them', res.statusCode)
+			sendChat(base, apiKey, body, timeout, cb)
+			return
+		}
+		cb(res, err)
+	})
 }
 
 // OpenRouter 路由：优先首字延迟（TTFT）最低的供应商，并把吞吐（TPS）低于 100 tok/s 的排到后面；

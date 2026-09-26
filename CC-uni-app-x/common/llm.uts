@@ -1,7 +1,7 @@
 // 多组分「反应与相容性检查」的 LLM 复核：通用 OpenAI 兼容接口（/chat/completions）
 // 离线或未配置时只用本地规则库；联网得到的结果按配方缓存到本地
 import { LLM, llmEnabled } from './config.uts'
-import { vlm, vlmReady, vlmChatUrl, applyProviderParams, providerHeaders } from './settings.uts'
+import { vlm, vlmReady, postChat } from './settings.uts'
 import { Warn } from './compat.uts'
 import { normF } from './chem.uts'
 
@@ -117,8 +117,6 @@ export function analyzeMix(comps : MixComp[], vol : string, rules : Warn[], cb :
 	const useVlm = vlmReady() && vlm.suggestOn
 	const base = useVlm ? vlm.baseUrl : LLM.baseUrl
 	const apiKey = useVlm ? vlm.apiKey : LLM.apiKey
-	const url = vlmChatUrl(base)
-	const header = providerHeaders(base, apiKey)
 	const body = {
 		model: useVlm ? vlm.model : LLM.model,
 		temperature: 0.2,
@@ -128,34 +126,27 @@ export function analyzeMix(comps : MixComp[], vol : string, rules : Warn[], cb :
 		]
 	} as UTSJSONObject
 	// 相容性判断需要一点推理，但不必深度思考；要求 JSON 输出
-	applyProviderParams(body, base, 'suggest')
-	uni.request<UTSJSONObject>({
-		url: url,
-		method: 'POST',
-		header: header,
-		data: body,
-		timeout: 90000,
-		success: (res : RequestSuccess<UTSJSONObject>) => {
-			const d = res.data
-			if (res.statusCode != 200 || d == null) {
-				cb(null, 'LLM 返回错误')
-				return
-			}
-			const ch = d.getArray<UTSJSONObject>('choices')
-			const msg = ch == null || ch.length == 0 ? null : ch[0].getJSON('message')
-			const content = msg == null ? '' : msg.getString('content', '')
-			console.log('LLM suggest ok', d.getString('provider', ''))
-			const list = parseWarns(content)
-			if (list == null) {
-				cb(null, 'LLM 结果无法解析')
-				return
-			}
-			cache.set(key, content)
-			saveCache()
-			cb(list, '')
-		},
-		fail: (e : RequestFail) => {
+	postChat(base, apiKey, body, 'suggest', 90000, (res : RequestSuccess<UTSJSONObject> | null, err : string) => {
+		if (res == null) {
 			cb(null, '网络不可用')
+			return
 		}
+		const d = res.data
+		if (res.statusCode != 200 || d == null) {
+			cb(null, 'LLM 返回错误')
+			return
+		}
+		const ch = d.getArray<UTSJSONObject>('choices')
+		const msg = ch == null || ch.length == 0 ? null : ch[0].getJSON('message')
+		const content = msg == null ? '' : msg.getString('content', '')
+		console.log('LLM suggest ok', d.getString('provider', ''))
+		const list = parseWarns(content)
+		if (list == null) {
+			cb(null, 'LLM 结果无法解析')
+			return
+		}
+		cache.set(key, content)
+		saveCache()
+		cb(list, '')
 	})
 }

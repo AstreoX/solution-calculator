@@ -101,7 +101,7 @@
 				<view class="card mt14">
 					<text class="h2">说明</text>
 					<text class="note mt10">API Key 只保存在本机，需要自己到供应商处申请后填写。识别时照片会上传给所选供应商，建议时会发送配方组分与浓度。</text>
-					<text class="note mt6">DeepSeek V4.1 Flash：OpenRouter 上的模型名为 deepseek/deepseek-v4.1-flash，DeepSeek 官方接口上为 deepseek-flash，均支持图片输入。</text>
+					<text class="note mt6">DeepSeek V4.1 Flash：OpenRouter 上的模型名为 deepseek/deepseek-v4.1-flash，DeepSeek 官方接口上为 deepseek-flash，硅基流动上为 deepseek-ai/DeepSeek-V4.1-Flash，均支持图片输入。</text>
 					<text class="note mt6">OpenRouter 会优先路由到首字延迟最低、吞吐不低于 100 tok/s 的供应商。</text>
 					<text class="note mt6">未配置或离线时，扫描可手动填写，相容性检查使用离线规则库。</text>
 				</view>
@@ -119,7 +119,7 @@
 </template>
 
 <script setup lang="uts">
-	import { PRESETS, VlmPreset, VlmSettings, vlm, saveVlm, vlmChatUrl, providerHeaders, isDeepSeek, isOpenRouter, openRouterRouting } from '@/common/settings.uts'
+	import { PRESETS, VlmPreset, VlmSettings, vlm, saveVlm, postChat } from '@/common/settings.uts'
 	import { upd, updateEnabled, checkNow, openUpdate, unreadIds, markAllRead, closeSheet } from '@/common/update.uts'
 
 	const win = uni.getWindowInfo()
@@ -251,32 +251,18 @@
 			max_tokens: 8,
 			messages: [{ role: 'user', content: '只回复 OK' } as UTSJSONObject]
 		} as UTSJSONObject
-		if (isDeepSeek(base)) body.set('thinking', { type: 'disabled' } as UTSJSONObject)
-		if (isOpenRouter(base)) {
-			body.set('reasoning', { enabled: false } as UTSJSONObject)
-			body.set('provider', openRouterRouting())
-		}
 		const t0 = Date.now()
-		uni.request<UTSJSONObject>({
-			url: vlmChatUrl(base),
-			method: 'POST',
-			header: providerHeaders(base, key),
-			data: body,
-			timeout: 30000,
-			success: (res : RequestSuccess<UTSJSONObject>) => {
-				testing.value = false
-				if (res.statusCode == 200) {
-					testOk.value = true
-					testMsg.value = '连接正常 · ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s'
-				} else {
-					testOk.value = false
-					testMsg.value = errText(res.data, res.statusCode)
-				}
-			},
-			fail: (e : RequestFail) => {
-				testing.value = false
+		postChat(base, key, body, 'test', 30000, (res : RequestSuccess<UTSJSONObject> | null, err : string) => {
+			testing.value = false
+			if (res == null) {
 				testOk.value = false
 				testMsg.value = '网络不可用或超时'
+			} else if (res.statusCode == 200) {
+				testOk.value = true
+				testMsg.value = '连接正常 · ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s'
+			} else {
+				testOk.value = false
+				testMsg.value = errText(res.data, res.statusCode)
 			}
 		})
 	}

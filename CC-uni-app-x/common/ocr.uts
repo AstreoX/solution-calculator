@@ -1,6 +1,6 @@
 // 标签 OCR：把照片发给配置好的 OCR 服务，返回逐行文字（有位置信息时一并返回）
 import { OCR, ocrEnabled } from './config.uts'
-import { vlm, vlmReady, vlmChatUrl, applyProviderParams, providerHeaders } from './settings.uts'
+import { vlm, vlmReady, postChat } from './settings.uts'
 
 export type OcrLine = {
 	text : string
@@ -120,56 +120,48 @@ function vlmOcr(b64 : string, w : number, h : number, cb : OcrCb) {
 		messages: [{ role: 'user', content: [txtPart, imgPart] } as UTSJSONObject]
 	} as UTSJSONObject
 	// 识别要快：关闭推理，要求 JSON 输出
-	applyProviderParams(body, base, 'ocr')
-	const header = providerHeaders(base, vlm.apiKey)
 	const t0 = Date.now()
-	uni.request<UTSJSONObject>({
-		url: vlmChatUrl(base),
-		method: 'POST',
-		header: header,
-		data: body,
-		timeout: 60000,
-		success: (res : RequestSuccess<UTSJSONObject>) => {
-			const d = res.data
-			if (res.statusCode != 200 || d == null) {
-				cb(null, '识别模型返回错误（' + res.statusCode.toFixed(0) + '）')
-				return
-			}
-			const ch = d.getArray<UTSJSONObject>('choices')
-			const msg = ch == null || ch.length == 0 ? null : ch[0].getJSON('message')
-			const content = msg == null ? '' : msg.getString('content', '')
-			console.log('VLM OCR ok', Date.now() - t0, 'ms', d.getString('provider', ''))
-			const o = jsonIn(content)
-			const lines : OcrLine[] = []
-			if (o == null) {
-				// 模型没按 JSON 输出：按纯文本逐行处理
-				const parts = content.split('\n')
-				for (let i = 0; i < parts.length; i++) {
-					const t = parts[i].replace(/^[\s\-*•`#>]+/, '').trim()
-					if (t.length > 0 && t != '```') lines.push(line(t, 0, 0, 0, 0))
-				}
-				cb({ lines: lines, imgW: w, imgH: h, fields: null } as OcrResult, '')
-				return
-			}
-			const arr = o.getArray<UTSJSONObject>('lines')
-			if (arr != null) {
-				for (let i = 0; i < arr.length; i++) {
-					const t = arr[i].getString('text', '').trim()
-					if (t.length == 0) continue
-					const bx = arr[i].getArray<number>('box')
-					if (bx != null && bx.length == 4 && w > 0 && h > 0 && bx[2] > bx[0] && bx[3] > bx[1] && bx[2] <= 1000 && bx[3] <= 1000) {
-						lines.push(line(t, bx[0] / 1000 * w, bx[1] / 1000 * h, (bx[2] - bx[0]) / 1000 * w, (bx[3] - bx[1]) / 1000 * h))
-					} else {
-						lines.push(line(t, 0, 0, 0, 0))
-					}
-				}
-			}
-			cb({ lines: lines, imgW: w, imgH: h, fields: o.getJSON('fields') } as OcrResult, '')
-		},
-		fail: (e : RequestFail) => {
-			console.log('VLM OCR failed', e.errCode, e.errMsg)
+	postChat(base, vlm.apiKey, body, 'ocr', 60000, (res : RequestSuccess<UTSJSONObject> | null, err : string) => {
+		if (res == null) {
+			console.log('VLM OCR failed', err)
 			cb(null, '网络不可用或识别超时')
+			return
 		}
+		const d = res.data
+		if (res.statusCode != 200 || d == null) {
+			cb(null, '识别模型返回错误（' + res.statusCode.toFixed(0) + '）')
+			return
+		}
+		const ch = d.getArray<UTSJSONObject>('choices')
+		const msg = ch == null || ch.length == 0 ? null : ch[0].getJSON('message')
+		const content = msg == null ? '' : msg.getString('content', '')
+		console.log('VLM OCR ok', Date.now() - t0, 'ms', d.getString('provider', ''))
+		const o = jsonIn(content)
+		const lines : OcrLine[] = []
+		if (o == null) {
+			// 模型没按 JSON 输出：按纯文本逐行处理
+			const parts = content.split('\n')
+			for (let i = 0; i < parts.length; i++) {
+				const t = parts[i].replace(/^[\s\-*•`#>]+/, '').trim()
+				if (t.length > 0 && t != '```') lines.push(line(t, 0, 0, 0, 0))
+			}
+			cb({ lines: lines, imgW: w, imgH: h, fields: null } as OcrResult, '')
+			return
+		}
+		const arr = o.getArray<UTSJSONObject>('lines')
+		if (arr != null) {
+			for (let i = 0; i < arr.length; i++) {
+				const t = arr[i].getString('text', '').trim()
+				if (t.length == 0) continue
+				const bx = arr[i].getArray<number>('box')
+				if (bx != null && bx.length == 4 && w > 0 && h > 0 && bx[2] > bx[0] && bx[3] > bx[1] && bx[2] <= 1000 && bx[3] <= 1000) {
+					lines.push(line(t, bx[0] / 1000 * w, bx[1] / 1000 * h, (bx[2] - bx[0]) / 1000 * w, (bx[3] - bx[1]) / 1000 * h))
+				} else {
+					lines.push(line(t, 0, 0, 0, 0))
+				}
+			}
+		}
+		cb({ lines: lines, imgW: w, imgH: h, fields: o.getJSON('fields') } as OcrResult, '')
 	})
 }
 

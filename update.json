@@ -1,0 +1,28 @@
+{
+  "latest": {
+    "versionName": "1.0.1",
+    "versionCode": 101,
+    "minVersionCode": 0,
+    "date": "2026-09-26",
+    "size": 27522269,
+    "sha1": "7b34d69aa113ff550d152eb7dce4fc1873a30472",
+    "notes": "· 调节旋钮转动时一格一格都有细腻的振动反馈，转到头、移入保存时也有提示\n· 新增版本更新与公告：以后的新版本可以在 App 内直接下载安装\n· 设置改为菜单：模型供应商（新增硅基流动，可获取模型列表）、我的配方、缓存管理、版本与公告\n· 多组分页可以保存、载入配方\n· 扫描线覆盖整个取景框\n· 安装包不再内置 API Key，使用扫描识别和 AI 建议前，请在「设置 → 模型供应商」填写",
+    "urls": [
+      "https://github.com/AstreoX/solution-calculator/releases/download/v1.0.1/chemcalc-1.0.1.apk"
+    ],
+    "page": "https://github.com/AstreoX/solution-calculator/releases/tag/v1.0.1"
+  },
+  "notices": [
+    {
+      "id": "2026-09-26-v101",
+      "title": "1.0.1 起支持 App 内更新",
+      "body": "以后有新版本时，启动会弹出更新提示，可以直接在 App 内下载安装，公告也会列在这里。\n扫描识别和 AI 建议需要先在「设置 → 模型供应商」填写 API Key。",
+      "date": "2026-09-26",
+      "level": "info",
+      "popup": false,
+      "minVersionCode": 0,
+      "maxVersionCode": 0,
+      "expires": "2026-10-31"
+    }
+  ]
+}

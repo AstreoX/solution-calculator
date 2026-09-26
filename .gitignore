@@ -24,3 +24,6 @@ HANDOFF.md
 # 本地编辑器 / 助手配置
 .claude/
 .DS_Store
+
+# 早期的预览图与草稿（README 截图在 docs/screenshots/）
+preview/

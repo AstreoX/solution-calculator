@@ -26,6 +26,9 @@
 					<view :class="['fld', 'mt10', focus == 'model' ? 'fld-on' : '']">
 						<input class="inp-s" :value="form.model" placeholder="模型名称" placeholder-class="ph"
 							@input="onModel($event as UniInputEvent)" @focus="focus = 'model'" @blur="blurField('model')" />
+						<view class="eye" @click="openPicker">
+							<text class="eye-t">选择</text>
+						</view>
 					</view>
 
 					<text class="lbl mt16">API Key</text>
@@ -84,11 +87,56 @@
 				<image class="ico20 ml6" src="/static/icons/checkb-FFFFFF.svg"></image>
 			</view>
 		</view>
+
+		<!-- 模型列表 -->
+		<view v-if="picker" class="pk-mask" @click="closePicker">
+			<view class="pk" :style="{ paddingBottom: actsBottom + 'px' }" @click="stopTap($event as UniPointerEvent)">
+				<view class="row aic">
+					<text class="h2 f1">选择模型</text>
+					<text v-if="models.length > 0" class="lbl">{{ filtered.length.toFixed(0) }} / {{ models.length.toFixed(0) }}</text>
+					<view class="pk-x" @click="closePicker">
+						<image class="ico20" src="/static/icons/close-62686C.svg"></image>
+					</view>
+				</view>
+				<view :class="['fld', 'mt10', focus == 'q' ? 'fld-on' : '']">
+					<input class="inp-s" :value="query" placeholder="搜索模型名称" placeholder-class="ph"
+						@input="onQuery($event as UniInputEvent)" @focus="focus = 'q'" @blur="blurField('q')" />
+				</view>
+				<view v-if="hasVision" class="row aic mt10">
+					<view :class="['fchip', visionOnly ? 'chip-on' : '']" @click="visionOnly = !visionOnly">
+						<text :class="['chip-c', visionOnly ? 'chip-t-on' : '']">只看支持图片</text>
+					</view>
+					<text class="lbl ml10 f1">标签识别需要模型支持图片输入</text>
+				</view>
+				<view v-if="loadingModels" class="pk-empty">
+					<text class="lbl">正在获取模型列表…</text>
+				</view>
+				<view v-else-if="modelErr.length > 0" class="pk-empty">
+					<text class="ns4 t13 c-amber">{{ modelErr }}</text>
+					<view class="scan-btn mt10" @click="loadModels">
+						<text class="test-t">重试</text>
+					</view>
+				</view>
+				<view v-else-if="filtered.length == 0" class="pk-empty">
+					<text class="lbl">没有匹配的模型</text>
+				</view>
+				<list-view v-else class="pk-list mt6" :show-scrollbar="false">
+					<list-item v-for="m in filtered" :key="m.id" class="pk-row" @click="pickModel(m.id)">
+						<view class="f1">
+							<text :class="['pk-id', m.id == form.model ? 'c-blue' : '']">{{ m.id }}</text>
+							<text v-if="m.name.length > 0 && m.name != m.id" class="lbl">{{ m.name }}</text>
+						</view>
+						<text v-if="m.vision == 1" class="pk-tag">图片</text>
+						<image v-if="m.id == form.model" class="ico16 ml6" src="/static/icons/check-1F5FAD.svg"></image>
+					</list-item>
+				</list-view>
+			</view>
+		</view>
 	</view>
 </template>
 
 <script setup lang="uts">
-	import { PRESETS, VlmPreset, VlmSettings, vlm, saveVlm, postChat } from '@/common/settings.uts'
+	import { PRESETS, VlmPreset, VlmSettings, ModelItem, vlm, saveVlm, postChat, fetchModels } from '@/common/settings.uts'
 
 	const win = uni.getWindowInfo()
 	const topPad = Math.max(56, win.statusBarHeight + 9)
@@ -114,6 +162,88 @@
 			out.push(row)
 		}
 		return out
+	})
+
+	// 模型列表（同一接口地址 + Key 只获取一次）
+	const picker = ref(false)
+	const models = ref<ModelItem[]>([])
+	const loadingModels = ref(false)
+	const modelErr = ref('')
+	const query = ref('')
+	const visionOnly = ref(false)
+	let modelsFor = ''
+
+	const hasVision = computed(() : boolean => {
+		for (let i = 0; i < models.value.length; i++) if (models.value[i].vision >= 0) return true
+		return false
+	})
+
+	const filtered = computed(() : ModelItem[] => {
+		const q = query.value.trim().toLowerCase()
+		const out : ModelItem[] = []
+		const list = models.value
+		for (let i = 0; i < list.length; i++) {
+			const m = list[i]
+			if (visionOnly.value && hasVision.value && m.vision != 1) continue
+			if (q.length > 0 && m.id.toLowerCase().indexOf(q) < 0 && m.name.toLowerCase().indexOf(q) < 0) continue
+			out.push(m)
+		}
+		return out
+	})
+
+	function loadModels() {
+		const base = form.baseUrl.trim()
+		if (base.length == 0) {
+			modelErr.value = '请先填写接口地址'
+			return
+		}
+		loadingModels.value = true
+		modelErr.value = ''
+		const tag = base + '|' + form.apiKey.trim()
+		fetchModels(base, form.apiKey.trim(), (list : ModelItem[] | null, err : string) => {
+			loadingModels.value = false
+			if (list == null) {
+				modelErr.value = err
+				return
+			}
+			models.value = list
+			modelsFor = tag
+			visionOnly.value = hasVision.value
+		})
+	}
+
+	function openPicker() {
+		uni.hideKeyboard()
+		picker.value = true
+		query.value = ''
+		if (modelsFor != form.baseUrl.trim() + '|' + form.apiKey.trim() || models.value.length == 0) loadModels()
+	}
+
+	function closePicker() {
+		uni.hideKeyboard()
+		picker.value = false
+	}
+
+	function stopTap(e : UniPointerEvent) {
+		e.stopPropagation()
+	}
+
+	function onQuery(e : UniInputEvent) {
+		query.value = e.detail.value
+	}
+
+	function pickModel(id : string) {
+		form.model = id
+		testMsg.value = ''
+		closePicker()
+	}
+
+	onBackPress((options : OnBackPressOptions) : boolean | null => {
+		if (picker.value) {
+			closePicker()
+			return true
+		}
+		return false
 	})
 
 	function blurField(k : string) {
@@ -245,6 +375,79 @@
 
 	.ml10 {
 		margin-left: 10px;
+	}
+
+	.pk-mask {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(22, 25, 27, 0.48);
+		justify-content: flex-end;
+		z-index: 100;
+	}
+
+	.pk {
+		height: 80%;
+		padding: 18px 16px 0 16px;
+		border-top-left-radius: 20px;
+		border-top-right-radius: 20px;
+		background-color: #FFFFFF;
+	}
+
+	.pk-x {
+		width: 36px;
+		height: 36px;
+		margin-left: 6px;
+		margin-right: -8px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.fchip {
+		height: 34px;
+		padding: 0 12px;
+		border-radius: 9px;
+		border: 1px solid #C9CDC5;
+		background-color: #FFFFFF;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.pk-empty {
+		flex: 1;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.pk-list {
+		flex: 1;
+	}
+
+	.pk-row {
+		flex-direction: row;
+		align-items: center;
+		padding: 11px 0;
+		border-bottom: 1px solid #E6E8E3;
+	}
+
+	.pk-id {
+		font-family: px4;
+		font-size: 15px;
+		line-height: 21px;
+		color: #16191B;
+	}
+
+	.pk-tag {
+		margin-left: 8px;
+		padding: 1px 6px;
+		border-radius: 4px;
+		background-color: #E3ECF7;
+		font-family: ns5;
+		font-size: 11px;
+		line-height: 16px;
+		color: #1F5FAD;
 	}
 
 	.chip-ph {

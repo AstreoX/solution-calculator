@@ -164,6 +164,51 @@ export function openRouterRouting() : UTSJSONObject {
 	} as UTSJSONObject
 }
 
+export type ModelItem = {
+	id : string
+	name : string
+	vision : number // 1 支持图片输入，0 不支持，-1 接口没给出（只有 OpenRouter 会返回输入类型）
+}
+
+// 获取供应商的模型列表：GET {base}/models（OpenAI 兼容格式 {data: [{id, ...}]}），保持接口返回的顺序
+export function fetchModels(base : string, apiKey : string, cb : (list : ModelItem[] | null, err : string) => void) {
+	uni.request<UTSJSONObject>({
+		url: base.trim().replace(/\/+$/, '') + '/models',
+		method: 'GET',
+		header: providerHeaders(base, apiKey),
+		timeout: 20000,
+		success: (res : RequestSuccess<UTSJSONObject>) => {
+			const d = res.data
+			if (res.statusCode == 401 || res.statusCode == 403) {
+				cb(null, 'API Key 无效或没有权限')
+				return
+			}
+			const arr = res.statusCode == 200 && d != null ? d.getArray<UTSJSONObject>('data') : null
+			if (arr == null) {
+				cb(null, res.statusCode == 200 ? '该接口不支持获取模型列表' : '获取失败（' + res.statusCode.toFixed(0) + '）')
+				return
+			}
+			const out : ModelItem[] = []
+			for (let i = 0; i < arr.length; i++) {
+				const id = arr[i].getString('id', '')
+				if (id.length == 0) continue
+				let vision = -1
+				const arch = arr[i].getJSON('architecture')
+				const mods = arch == null ? null : arch.getArray<any>('input_modalities')
+				if (mods != null) {
+					vision = 0
+					for (let k = 0; k < mods.length; k++) if (typeof mods[k] == 'string' && (mods[k] as string) == 'image') vision = 1
+				}
+				out.push({ id: id, name: arr[i].getString('name', ''), vision: vision } as ModelItem)
+			}
+			cb(out, '')
+		},
+		fail: (e : RequestFail) => {
+			cb(null, '网络不可用或超时')
+		}
+	})
+}
+
 export function providerHeaders(base : string, apiKey : string) : UTSJSONObject {
 	const h = { 'Content-Type': 'application/json' } as UTSJSONObject
 	if (apiKey.length > 0) h.set('Authorization', 'Bearer ' + apiKey)

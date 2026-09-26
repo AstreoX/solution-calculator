@@ -16,8 +16,10 @@ tools/db/_out/
 tools/fonts/_work/
 tools/release/dist/
 
-# 设计稿解压目录（由根目录的 zip 生成）
+# 设计稿（Claude Design 导出的 HTML 压缩包及其解压目录）与本地交接文档，只留在本机
+/*-html.zip
 _design/
+HANDOFF.md
 
 # 本地编辑器 / 助手配置
 .claude/

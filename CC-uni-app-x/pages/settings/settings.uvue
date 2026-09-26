@@ -18,6 +18,20 @@
 					</view>
 				</view>
 
+				<text class="grp">数据</text>
+				<view class="card menu">
+					<view class="mrow" @click="open('recipes')">
+						<view class="mic">
+							<image class="ico20" src="/static/icons/book-1F5FAD.svg"></image>
+						</view>
+						<view class="mtx">
+							<text class="sw-t">我的配方</text>
+							<text class="lbl">{{ rstore.list.length > 0 ? rstore.list.length.toFixed(0) + ' 个多组分配方' : '还没有保存的配方' }}</text>
+						</view>
+						<image class="chev" src="/static/icons/chevr-8C959C.svg"></image>
+					</view>
+				</view>
+
 				<text class="grp">关于</text>
 				<view class="card menu">
 					<view class="mrow" @click="open('about')">
@@ -40,6 +54,7 @@
 <script setup lang="uts">
 	import { PRESETS, vlm, vlmReady } from '@/common/settings.uts'
 	import { upd } from '@/common/update.uts'
+	import { rstore } from '@/common/recipes.uts'
 
 	const win = uni.getWindowInfo()
 	const topPad = Math.max(56, win.statusBarHeight + 9)

@@ -4,6 +4,9 @@
 			<view class="content" :style="{ paddingTop: topPad + 'px' }">
 				<view class="header">
 					<text class="h1">多组分配制</text>
+					<view class="rc-btn" @click="openRecipes">
+						<image class="rc-btn-ic" src="/static/icons/book-4F555A.svg"></image>
+					</view>
 				</view>
 
 				<!-- 配方 -->
@@ -151,6 +154,37 @@
 		<nav-bar active="multi" :bottom="navBottom" @go="goTab"></nav-bar>
 
 		<scan-sheet v-if="scanOpen" class="overlay" kind="component" @apply="applyScan" @close="scanOpen = false"></scan-sheet>
+
+		<!-- 我的配方 -->
+		<view v-if="rstore.sheet" class="rc-mask" @click="closeRecipes">
+			<view class="rc" :style="{ paddingBottom: navBottom + 'px' }" @click="stopTap($event as UniPointerEvent)">
+				<view class="row aic">
+					<text class="h2 f1">我的配方</text>
+					<view class="rc-x" @click="closeRecipes">
+						<image class="ico20" src="/static/icons/close-62686C.svg"></image>
+					</view>
+				</view>
+				<view class="scan-btn jcc mt10" @click="saveCurrent">
+					<image class="ico20" src="/static/icons/plus-1F5FAD.svg"></image>
+					<text class="rc-save-t ml6">保存当前配方</text>
+				</view>
+				<text class="lbl mt6">{{ saveHint }}</text>
+				<view v-if="rstore.list.length == 0" class="rc-empty">
+					<text class="lbl">还没有保存的配方</text>
+				</view>
+				<scroll-view v-else class="rc-list mt10" direction="vertical" :show-scrollbar="false">
+					<view v-for="(r, ri) in rstore.list" :key="r.id" :class="['rc-row', ri > 0 ? 'rc-sep' : '']" @click="loadRecipe(r)">
+						<view class="f1">
+							<text class="rc-name">{{ r.name }}</text>
+							<text class="lbl">{{ sumText(r) }}</text>
+						</view>
+						<view class="rc-del" @click="delRecipe(r, $event as UniPointerEvent)">
+							<image class="ico20" src="/static/icons/trash-62686C.svg"></image>
+						</view>
+					</view>
+				</scroll-view>
+			</view>
+		</view>
 		<dial-knob v-if="dialOpen" ref="dialRef" class="overlay" :value="dialValue" :spec="dialSpec" :label="dialLabel" :unit="dialUnit"
 			:result="dialResult" :anchor-y="dialY" :dragging="dialDrag" @change="dialChange" @close="dialClose"></dial-knob>
 	</view>
@@ -158,6 +192,8 @@
 
 <script setup lang="uts">
 	import { requireOcr, openModelSettings } from '@/common/gate.uts'
+	import { rstore, Recipe, RecipeRow, saveRecipe, deleteRecipe, findRecipe, autoRecipeName, recipeSummary } from '@/common/recipes.uts'
+	import { confirmDialog } from '@/common/dialog.uts'
 	import { normF, pretty } from '@/common/chem.uts'
 	import { sig, num, fmtV } from '@/common/fmt.uts'
 	import { DialSpec, ScanValue, Run, runs, concSpec, volSpec } from '@/common/types.uts'
@@ -283,6 +319,92 @@
 		for (let i = 0; i < rs.length; i++) arr.push({ f: rs[i].f, c: rs[i].c, u: rs[i].u } as UTSJSONObject)
 		saveState('multi', { name: name.value, vol: vol.value, d: prec.value, rows: arr } as UTSJSONObject)
 	}
+
+	// —— 我的配方 ——
+	const saveHint = computed(() : string => {
+		const n = name.value.trim()
+		if (n.length == 0) return '未填写配方名称，将保存为「' + autoRecipeName() + '」'
+		return findRecipe(n) != null ? '将覆盖已保存的「' + n + '」' : '将保存为「' + n + '」'
+	})
+
+	// 模板里不能直接调用导入的函数，包一层
+	function sumText(r : Recipe) : string {
+		return recipeSummary(r)
+	}
+
+	function openRecipes() {
+		uni.hideKeyboard()
+		focus.value = ''
+		rstore.sheet = true
+	}
+
+	function closeRecipes() {
+		rstore.sheet = false
+	}
+
+	function stopTap(e : UniPointerEvent) {
+		e.stopPropagation()
+	}
+
+	function currentRows() : RecipeRow[] {
+		const out : RecipeRow[] = []
+		const rs = rows.value
+		for (let i = 0; i < rs.length; i++) if (rs[i].f.trim().length > 0) out.push({ f: rs[i].f.trim(), c: rs[i].c, u: rs[i].u } as RecipeRow)
+		return out
+	}
+
+	function saveCurrent() {
+		const rs = currentRows()
+		if (rs.length == 0) {
+			uni.showToast({ title: '先添加组分再保存', icon: 'none' })
+			return
+		}
+		const typed = name.value.trim()
+		const n = typed.length > 0 ? typed : autoRecipeName()
+		const doSave = () => {
+			saveRecipe(n, vol.value, prec.value, rs)
+			if (typed.length == 0) {
+				name.value = n
+				persist()
+			}
+			uni.showToast({ title: '已保存', icon: 'success', duration: 1200 })
+		}
+		if (findRecipe(n) != null) confirmDialog('覆盖同名配方？', '已有名为「' + n + '」的配方，保存后会用当前内容替换它。', '覆盖', '取消', false, doSave)
+		else doSave()
+	}
+
+	function applyRecipe(r : Recipe) {
+		name.value = r.name
+		vol.value = r.vol
+		prec.value = r.d
+		const list : Row[] = []
+		for (let i = 0; i < r.rows.length; i++) list.push(newRow(r.rows[i].f, r.rows[i].c, r.rows[i].u))
+		if (list.length == 0) list.push(newRow('', '', 'mM'))
+		rows.value = list
+		persist()
+		rstore.sheet = false
+	}
+
+	function loadRecipe(r : Recipe) {
+		if (currentRows().length == 0) {
+			applyRecipe(r)
+			return
+		}
+		confirmDialog('载入「' + r.name + '」？', '会替换当前输入的配方名称、体积和组分。', '载入', '取消', false, () => { applyRecipe(r) })
+	}
+
+	function delRecipe(r : Recipe, e : UniPointerEvent) {
+		e.stopPropagation()
+		confirmDialog('删除「' + r.name + '」？', '删除后无法恢复。', '删除', '取消', true, () => { deleteRecipe(r.id) })
+	}
+
+	// 设置 → 我的配方 里点了「载入」：填入并切到多组分页
+	watch((() : Recipe | null => rstore.pending), (r : Recipe | null) => {
+		if (r == null) return
+		rstore.pending = null
+		applyRecipe(r)
+		emit('go', 'multi')
+	})
 
 	function setName(v : string) {
 		name.value = v
@@ -689,7 +811,93 @@
 	}
 
 	.header {
+		position: relative;
 		padding: 0 4px;
+	}
+
+	/* 标题右侧「我的配方」按钮，位置与配制页的齿轮一致 */
+	.rc-btn {
+		position: absolute;
+		right: -11px;
+		top: -4.5px;
+		width: 44px;
+		height: 44px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.rc-btn-ic {
+		width: 22px;
+		height: 22px;
+	}
+
+	.rc-mask {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(22, 25, 27, 0.48);
+		justify-content: flex-end;
+		z-index: 100;
+	}
+
+	.rc {
+		max-height: 600px;
+		padding: 18px 16px 0 16px;
+		border-top-left-radius: 20px;
+		border-top-right-radius: 20px;
+		background-color: #FFFFFF;
+	}
+
+	.rc-x {
+		width: 36px;
+		height: 36px;
+		margin-right: -8px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.rc-save-t {
+		font-family: ns5;
+		font-size: 15px;
+		line-height: 21px;
+		color: #1F5FAD;
+	}
+
+	.rc-empty {
+		height: 120px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.rc-list {
+		max-height: 420px;
+	}
+
+	.rc-row {
+		flex-direction: row;
+		align-items: center;
+		padding: 12px 0;
+	}
+
+	.rc-sep {
+		border-top: 1px solid #E6E8E3;
+	}
+
+	.rc-name {
+		font-family: ns5;
+		font-size: 15px;
+		line-height: 21px;
+		color: #16191B;
+	}
+
+	.rc-del {
+		width: 40px;
+		height: 40px;
+		margin-right: -8px;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.mt6 {

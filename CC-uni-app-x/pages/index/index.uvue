@@ -14,6 +14,7 @@
 	import { noSuggestTree } from '@/common/native.uts'
 	import { upd, checkOnLaunch, closeSheet } from '@/common/update.uts'
 	import { dlg, closeDialog } from '@/common/dialog.uts'
+	import { rstore } from '@/common/recipes.uts'
 
 	const tab = ref('prep')
 	const pageRef = ref<UniElement | null>(null)
@@ -50,6 +51,10 @@
 		}
 		if (upd.sheet.length > 0) {
 			closeSheet()
+			return true
+		}
+		if (rstore.sheet) {
+			rstore.sheet = false
 			return true
 		}
 		return false

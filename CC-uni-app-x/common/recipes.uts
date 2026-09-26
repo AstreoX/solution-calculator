@@ -1,0 +1,109 @@
+// 多组分配方：保存 / 载入 / 删除（保存在本机）
+
+export type RecipeRow = {
+	f : string // 化学式或名称（与输入框一致）
+	c : string // 浓度
+	u : string // 单位
+}
+
+export type Recipe = {
+	id : string
+	name : string
+	vol : string // 最终体积 mL
+	d : number // 天平精度
+	rows : RecipeRow[]
+	savedAt : number
+}
+
+export type RecipeStore = {
+	list : Recipe[]
+	pending : Recipe | null // 设置页里点「载入」后，由多组分页接收并填入
+	sheet : boolean // 多组分页的配方弹层是否打开（首页返回键据此关闭）
+}
+
+const KEY = 'recipes'
+
+function parseAll() : Recipe[] {
+	const out : Recipe[] = []
+	try {
+		const s = uni.getStorageSync(KEY)
+		if (s == null || typeof s != 'string' || (s as string).length == 0) return out
+		const arr = JSON.parseArray<any>(s as string)
+		if (arr == null) return out
+		for (let i = 0; i < arr.length; i++) {
+			if (!(arr[i] instanceof UTSJSONObject)) continue
+			const o = arr[i] as UTSJSONObject
+			const rows : RecipeRow[] = []
+			const ra = o.getArray<UTSJSONObject>('rows')
+			if (ra != null) for (let k = 0; k < ra.length; k++) rows.push({ f: ra[k].getString('f', ''), c: ra[k].getString('c', ''), u: ra[k].getString('u', 'mM') } as RecipeRow)
+			out.push({ id: o.getString('id', ''), name: o.getString('name', ''), vol: o.getString('vol', ''), d: o.getNumber('d', 0.001), rows: rows, savedAt: o.getNumber('savedAt', 0) } as Recipe)
+		}
+	} catch (e) { }
+	return out
+}
+
+export const rstore = reactive<RecipeStore>({ list: parseAll(), pending: null, sheet: false } as RecipeStore)
+
+function persist() {
+	const arr : UTSJSONObject[] = []
+	for (let i = 0; i < rstore.list.length; i++) {
+		const r = rstore.list[i]
+		const rows : UTSJSONObject[] = []
+		for (let k = 0; k < r.rows.length; k++) rows.push({ f: r.rows[k].f, c: r.rows[k].c, u: r.rows[k].u } as UTSJSONObject)
+		arr.push({ id: r.id, name: r.name, vol: r.vol, d: r.d, rows: rows, savedAt: r.savedAt } as UTSJSONObject)
+	}
+	uni.setStorageSync(KEY, JSON.stringify(arr))
+}
+
+export function findRecipe(name : string) : Recipe | null {
+	const n = name.trim()
+	for (let i = 0; i < rstore.list.length; i++) if (rstore.list[i].name == n) return rstore.list[i]
+	return null
+}
+
+// 同名则覆盖（保留原 id），否则新增；最近保存的排在最前
+export function saveRecipe(name : string, vol : string, d : number, rows : RecipeRow[]) {
+	const n = name.trim()
+	const old = findRecipe(n)
+	const r = { id: old != null ? old.id : Math.floor(Date.now()).toFixed(0), name: n, vol: vol, d: d, rows: rows, savedAt: Date.now() } as Recipe
+	const list : Recipe[] = [r]
+	for (let i = 0; i < rstore.list.length; i++) if (rstore.list[i].name != n) list.push(rstore.list[i])
+	rstore.list = list
+	persist()
+}
+
+export function deleteRecipe(id : string) {
+	const list : Recipe[] = []
+	for (let i = 0; i < rstore.list.length; i++) if (rstore.list[i].id != id) list.push(rstore.list[i])
+	rstore.list = list
+	persist()
+}
+
+export function requestLoad(r : Recipe) {
+	rstore.pending = r
+}
+
+// 未填写名称时的自动命名：配方 1、配方 2……（跳过已用的）
+export function autoRecipeName() : string {
+	for (let i = 1; i < 1000; i++) {
+		const n = '配方 ' + i.toFixed(0)
+		if (findRecipe(n) == null) return n
+	}
+	return '配方'
+}
+
+function pad2(n : number) : string {
+	return (n < 10 ? '0' : '') + n.toFixed(0)
+}
+
+export function recipeSummary(r : Recipe) : string {
+	let n = 0
+	for (let i = 0; i < r.rows.length; i++) if (r.rows[i].f.trim().length > 0) n++
+	const parts : string[] = [n.toFixed(0) + ' 种组分']
+	if (r.vol.trim().length > 0) parts.push(r.vol.trim() + ' mL')
+	if (r.savedAt > 0) {
+		const t = new Date(r.savedAt)
+		parts.push(pad2(t.getMonth() + 1) + '-' + pad2(t.getDate()) + ' ' + pad2(t.getHours()) + ':' + pad2(t.getMinutes()))
+	}
+	return parts.join(' · ')
+}

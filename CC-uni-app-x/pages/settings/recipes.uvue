@@ -1,0 +1,139 @@
+<template>
+	<view class="set-page">
+		<scroll-view class="set-scroller" direction="vertical" :show-scrollbar="false">
+			<view class="set-content" :style="{ paddingTop: topPad + 'px' }">
+				<set-header title="我的配方"></set-header>
+
+				<view class="card mt14">
+					<view v-if="rstore.list.length == 0" class="empty">
+						<text class="lbl">还没有保存的配方</text>
+						<text class="lbl mt4">在「多组分」页右上角可以保存当前配方</text>
+					</view>
+					<view v-for="(r, ri) in rstore.list" :key="r.id" :class="['rrow', ri > 0 ? 'rsep' : '']">
+						<view class="f1" @click="load(r)">
+							<text class="rname">{{ r.name }}</text>
+							<text class="lbl">{{ sumText(r) }}</text>
+							<text class="rcomp">{{ compText(r) }}</text>
+						</view>
+						<view class="rbtn" @click="load(r)">
+							<text class="rbtn-t">载入</text>
+						</view>
+						<view class="rdel" @click="del(r)">
+							<image class="ico20" src="/static/icons/trash-62686C.svg"></image>
+						</view>
+					</view>
+				</view>
+				<text v-if="rstore.list.length > 0" class="set-note mt10">配方只保存在本机。载入会替换「多组分」页当前的输入。</text>
+			</view>
+		</scroll-view>
+		<app-dialog></app-dialog>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { rstore, Recipe, deleteRecipe, requestLoad, recipeSummary } from '@/common/recipes.uts'
+	import { dlg, confirmDialog, closeDialog } from '@/common/dialog.uts'
+
+	const win = uni.getWindowInfo()
+	const topPad = Math.max(56, win.statusBarHeight + 9)
+
+	// 模板里不能直接调用导入的函数，包一层
+	function sumText(r : Recipe) : string {
+		return recipeSummary(r)
+	}
+
+	function compText(r : Recipe) : string {
+		const fs : string[] = []
+		for (let i = 0; i < r.rows.length; i++) if (r.rows[i].f.length > 0) fs.push(r.rows[i].f)
+		return fs.join('、')
+	}
+
+	function load(r : Recipe) {
+		requestLoad(r)
+		uni.showToast({ title: '已载入「' + r.name + '」', icon: 'none' })
+		// 设置首页 → 我的配方，退两层回到主页
+		uni.navigateBack({ delta: 2 })
+	}
+
+	function del(r : Recipe) {
+		confirmDialog('删除「' + r.name + '」？', '删除后无法恢复。', '删除', '取消', true, () => { deleteRecipe(r.id) })
+	}
+
+	onBackPress((options : OnBackPressOptions) : boolean | null => {
+		if (dlg.show) {
+			closeDialog()
+			return true
+		}
+		return false
+	})
+</script>
+
+<style>
+	.mt4 {
+		margin-top: 4px;
+	}
+
+	.mt10 {
+		margin-top: 10px;
+	}
+
+	.mt14 {
+		margin-top: 14px;
+	}
+
+	.empty {
+		height: 120px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.rrow {
+		flex-direction: row;
+		align-items: center;
+		padding: 10px 0;
+	}
+
+	.rsep {
+		border-top: 1px solid #E6E8E3;
+	}
+
+	.rname {
+		font-family: ns5;
+		font-size: 15px;
+		line-height: 21px;
+		color: #16191B;
+	}
+
+	.rcomp {
+		font-family: px4;
+		font-size: 13px;
+		line-height: 19px;
+		color: #62686C;
+	}
+
+	.rbtn {
+		height: 34px;
+		padding: 0 12px;
+		margin-left: 8px;
+		border-radius: 9px;
+		background-color: #E3ECF7;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.rbtn-t {
+		font-family: ns5;
+		font-size: 14px;
+		line-height: 20px;
+		color: #1F5FAD;
+	}
+
+	.rdel {
+		width: 40px;
+		height: 40px;
+		margin-left: 4px;
+		margin-right: -8px;
+		align-items: center;
+		justify-content: center;
+	}
+</style>

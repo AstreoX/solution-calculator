@@ -11,7 +11,7 @@
 [![Android 5.0+](https://img.shields.io/badge/Android-5.0%2B-3DDC84?logo=android&logoColor=white)](https://github.com/AstreoX/solution-calculator/releases)
 [![uni-app x](https://img.shields.io/badge/uni--app%20x-原生编译-2B9939)](https://doc.dcloud.net.cn/uni-app-x/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-1F5FAD.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/AstreoX/solution-calculator?include_prereleases&color=16191B&label=Release)](https://github.com/AstreoX/solution-calculator/releases)
+[![下载](https://img.shields.io/badge/下载-GitHub%20Releases-16191B?logo=github)](https://github.com/AstreoX/solution-calculator/releases)
 
 [下载安装包](https://github.com/AstreoX/solution-calculator/releases) ·
 [功能](#功能) ·

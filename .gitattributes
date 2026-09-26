@@ -1,0 +1,6 @@
+# GitHub 语言统计：uni-app x 的 .uts 按 TypeScript、.uvue 按 Vue 计算
+*.uts linguist-language=TypeScript
+*.uvue linguist-language=Vue
+# 构建工具脚本不计入主语言
+tools/** linguist-vendored
+skills/** linguist-documentation

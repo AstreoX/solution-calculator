@@ -1,0 +1,108 @@
+<template>
+	<view v-if="dlg.show" class="mask" @click="onCancel">
+		<view class="dlg" @click="stopTap($event as UniPointerEvent)">
+			<text class="ns7 t20 c-ink">{{ dlg.title }}</text>
+			<text v-if="dlg.body.length > 0" class="note mt8">{{ dlg.body }}</text>
+			<view class="row mt18">
+				<view v-if="dlg.cancel.length > 0" class="btn2 f1" @click="onCancel">
+					<text class="btn2-t">{{ dlg.cancel }}</text>
+				</view>
+				<view :class="['btn1', 'f1', dlg.cancel.length > 0 ? 'ml10' : '', dlg.danger ? 'btn1-danger' : '']" @click="onOk">
+					<text class="btn1-t">{{ dlg.ok }}</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { dlg, closeDialog, dialogOk } from '@/common/dialog.uts'
+
+	defineOptions({ styleIsolation: 'app' })
+
+	function onCancel() {
+		closeDialog()
+	}
+
+	function onOk() {
+		dialogOk()
+	}
+
+	function stopTap(e : UniPointerEvent) {
+		e.stopPropagation()
+	}
+</script>
+
+<style>
+	.mask {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(22, 25, 27, 0.48);
+		justify-content: center;
+		padding: 0 20px;
+		z-index: 110;
+	}
+
+	.dlg {
+		background-color: #FFFFFF;
+		border-radius: 20px;
+		padding: 20px 20px 18px 20px;
+	}
+
+	.mt8 {
+		margin-top: 8px;
+	}
+
+	.mt18 {
+		margin-top: 18px;
+	}
+
+	.ml10 {
+		margin-left: 10px;
+	}
+
+	.note {
+		font-family: ns4;
+		font-size: 14px;
+		line-height: 22px;
+		color: #4F555A;
+	}
+
+	.btn1 {
+		height: 48px;
+		border-radius: 14px;
+		background-color: #1F5FAD;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.btn1-danger {
+		background-color: #A3261B;
+	}
+
+	.btn1-t {
+		font-family: ns7;
+		font-size: 16px;
+		line-height: 23px;
+		color: #FFFFFF;
+	}
+
+	.btn2 {
+		height: 48px;
+		border-radius: 14px;
+		border: 1px solid #C9CDC5;
+		background-color: #FFFFFF;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.btn2-t {
+		font-family: ns5;
+		font-size: 16px;
+		line-height: 23px;
+		color: #16191B;
+	}
+</style>

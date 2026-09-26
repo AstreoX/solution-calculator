@@ -4,6 +4,7 @@
 		<dilu-pane v-show="tab == 'dilu'" class="fill" @go="go"></dilu-pane>
 		<multi-pane v-show="tab == 'multi'" class="fill" @go="go"></multi-pane>
 		<update-sheet></update-sheet>
+		<app-dialog></app-dialog>
 	</view>
 </template>
 
@@ -12,6 +13,7 @@
 	import { dumpLayout, selfTest } from '@/common/debug.uts'
 	import { noSuggestTree } from '@/common/native.uts'
 	import { upd, checkOnLaunch, closeSheet } from '@/common/update.uts'
+	import { dlg, closeDialog } from '@/common/dialog.uts'
 
 	const tab = ref('prep')
 	const pageRef = ref<UniElement | null>(null)
@@ -42,6 +44,10 @@
 	})
 
 	onBackPress((options : OnBackPressOptions) : boolean | null => {
+		if (dlg.show) {
+			closeDialog()
+			return true
+		}
 		if (upd.sheet.length > 0) {
 			closeSheet()
 			return true

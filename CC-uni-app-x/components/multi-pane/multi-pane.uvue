@@ -84,6 +84,11 @@
 						<text class="h2">反应与相容性检查</text>
 						<text class="sum">{{ checkSummary }}</text>
 					</view>
+					<view v-if="aiHint.length > 0" class="row aic mt10" @click="goModelSettings">
+						<image class="ico16" src="/static/icons/info-AEB4B8.svg"></image>
+						<text class="ai-hint f1">{{ aiHint }}</text>
+						<text class="ai-go">{{ aiReadyOff ? '去开启' : '去设置' }}</text>
+					</view>
 					<view v-if="calc.noWarn" class="row aic mt12">
 						<image class="ico20" src="/static/icons/check-1F5FAD.svg"></image>
 						<text class="ok-t ml8">未发现常见反应风险</text>
@@ -152,12 +157,14 @@
 </template>
 
 <script setup lang="uts">
+	import { requireOcr, openModelSettings } from '@/common/gate.uts'
 	import { normF, pretty } from '@/common/chem.uts'
 	import { sig, num, fmtV } from '@/common/fmt.uts'
 	import { DialSpec, ScanValue, Run, runs, concSpec, volSpec } from '@/common/types.uts'
 	import { resolveFormula, Resolved } from '@/common/resolve.uts'
 	import { checkMix, Warn, CheckResult } from '@/common/compat.uts'
 	import { analyzeMix, llmCached, mixKey, MixComp, suggestEnabled } from '@/common/llm.uts'
+	import { vlm, vlmReady } from '@/common/settings.uts'
 	import { DEMO } from '@/common/config.uts'
 	import { loadState, saveState } from '@/common/store.uts'
 	import { noSuggestTree } from '@/common/native.uts'
@@ -330,6 +337,8 @@
 	}
 	function openScan() {
 		uni.hideKeyboard()
+		// 没有可用的识别模型时先提示去填 API Key
+		if (!requireOcr()) return
 		scanOpen.value = true
 	}
 	function applyScan(v : ScanValue) {
@@ -470,6 +479,20 @@
 		if (llmWarns.value != null && llmKey.value == mixKey(c.comps, vol.value)) return 'AI 复核 · 仅供参考'
 		return '仅供参考'
 	})
+
+	// AI 复核不可用时，在相容性检查里提示（两个以上组分才会复核）
+	const aiReadyOff = computed(() : boolean => vlmReady() && !vlm.suggestOn)
+	const aiHint = computed(() : string => {
+		const c = calc.value
+		if (c.comps.length < 2 || suggestEnabled()) return ''
+		// 这个配方之前复核过（有缓存）就照常显示 AI 结果，不再提示
+		if (llmWarns.value != null && llmKey.value == mixKey(c.comps, vol.value)) return ''
+		return aiReadyOff.value ? 'AI 复核已关闭，仅用离线规则检查' : '未填写 API Key，仅用离线规则检查'
+	})
+
+	function goModelSettings() {
+		openModelSettings()
+	}
 
 	// 配方变化后（停顿 1.2 s）请求 LLM 复核；已缓存的配方直接用缓存
 	watch(calc, (c : MultiOut) => {
@@ -1169,5 +1192,21 @@
 		top: 0;
 		right: 0;
 		bottom: 0;
+	}
+
+	.ai-hint {
+		margin-left: 6px;
+		font-family: ns4;
+		font-size: 13px;
+		line-height: 19px;
+		color: #62686C;
+	}
+
+	.ai-go {
+		margin-left: 8px;
+		font-family: ns5;
+		font-size: 13px;
+		line-height: 19px;
+		color: #1F5FAD;
 	}
 </style>

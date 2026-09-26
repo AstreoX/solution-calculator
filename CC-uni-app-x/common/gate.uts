@@ -1,0 +1,23 @@
+// 需要 API Key 的功能入口：没有可用模型时弹出提示，引导到「设置 → 模型供应商」
+
+import { vlm, vlmReady } from './settings.uts'
+import { ocrEnabled } from './config.uts'
+import { confirmDialog } from './dialog.uts'
+
+export function openModelSettings() {
+	uni.navigateTo({ url: '/pages/settings/model' })
+}
+
+// 标签扫描：返回 true 表示可以直接打开扫描页
+export function requireOcr() : boolean {
+	if (ocrEnabled()) return true
+	if (vlmReady()) {
+		if (vlm.ocrOn) return true
+		confirmDialog('标签扫描识别已关闭', '扫描需要由视觉模型读取标签内容。可以在「设置 → 模型供应商」里打开「标签扫描识别」。',
+			'去开启', '取消', false, () => { openModelSettings() })
+		return false
+	}
+	confirmDialog('需要 API Key', '标签扫描要用视觉模型读取标签上的名称、化学式、含量等信息。请先在「设置 → 模型供应商」里选择供应商并填写 API Key。',
+		'去设置', '取消', false, () => { openModelSettings() })
+	return false
+}

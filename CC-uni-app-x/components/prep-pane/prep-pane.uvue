@@ -131,6 +131,7 @@
 </template>
 
 <script setup lang="uts">
+	import { requireOcr } from '@/common/gate.uts'
 	import { molarMass, pretty, normF } from '@/common/chem.uts'
 	import { DASH, sig, num, fmtV, fmtPct, massAuto, molAuto, concAuto, volAuto, VolText } from '@/common/fmt.uts'
 	import { Dock, Fact, Tag, DialSpec, ScanValue, F, T, concSpec, volSpec, linSpec } from '@/common/types.uts'
@@ -290,6 +291,8 @@
 	// —— 扫描 ——
 	function openScan() {
 		uni.hideKeyboard()
+		// 没有可用的识别模型时先提示去填 API Key
+		if (!requireOcr()) return
 		scanOpen.value = true
 	}
 	function applyScan(v : ScanValue) {

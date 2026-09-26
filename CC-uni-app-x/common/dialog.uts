@@ -1,0 +1,35 @@
+// 通用确认框（样式与更新弹窗一致），由各页面挂载的 <app-dialog> 显示
+
+export type DialogState = {
+	show : boolean
+	title : string
+	body : string
+	ok : string
+	cancel : string // 为空则只有一个按钮
+	danger : boolean // 确认按钮用红色（删除、清除等）
+}
+
+export const dlg = reactive<DialogState>({ show: false, title: '', body: '', ok: '', cancel: '', danger: false } as DialogState)
+
+let okCb : (() => void) | null = null
+
+export function confirmDialog(title : string, body : string, ok : string, cancel : string, danger : boolean, cb : () => void) {
+	dlg.title = title
+	dlg.body = body
+	dlg.ok = ok
+	dlg.cancel = cancel
+	dlg.danger = danger
+	okCb = cb
+	dlg.show = true
+}
+
+export function closeDialog() {
+	dlg.show = false
+	okCb = null
+}
+
+export function dialogOk() {
+	const f = okCb
+	closeDialog()
+	if (f != null) f()
+}

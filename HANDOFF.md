@@ -68,6 +68,7 @@
      - 「Gitee」安装包链接返回登录页时，自动换到「GitHub」下载，进度条正常，校验通过后调起了系统安装程序；
      - 公告弹出后会记为已读，过期公告不显示，返回键能关闭弹窗。
    - `manifest.json` 新增了安装权限 `REQUEST_INSTALL_PACKAGES`。第一次在 App 内更新时，系统会要求允许「安装未知应用」。
+   - 整套发版 / 发公告流程写成了本地 skill：`skills/solution-calculator-release/`。它没有配置自动加载，用法见 `skills/README.md`。发布后可以用 `scripts/check_release.py` 核对远端是否同步、下载地址是否可用。
 5. ~~微信消息~~：已发给「白极冰」（2026-09-26 08:54，你授权后重试）——6 屏预览拼图 + 介绍文字（`preview/发给白极冰.txt`）。单屏原图在 `preview/`，需要可补发。
 
 ## 二、完成情况

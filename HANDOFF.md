@@ -10,8 +10,9 @@
      - 可填接口地址、模型、API Key，并「测试连接」。
      - 两个开关分别控制「标签扫描识别」和「多组分相容性建议」是否使用模型。
      - 设置保存在本机。
-   - **默认值**：OpenRouter，模型 `deepseek/deepseek-v4.1-flash`，Key 用你给的测试 Key。
-     - 测试 Key 写在 `common/config.uts` 的 `VLM_DEFAULT_KEY`，会被打进安装包。**公开发布前请清空或换成正式 Key。**
+   - **默认值**：OpenRouter，模型 `deepseek/deepseek-v4.1-flash`。
+     - 安装包里不再预置 API Key（2026-09-26 起），用户需要在设置里自己填写。
+     - 之前那个 OpenRouter 测试 Key 打进过 09:58 那个安装包；如果那个包已经发出去了，建议到 OpenRouter 后台停用这个 Key。
      - DeepSeek 官方接口上这个模型叫 `deepseek-flash`，已作为「DeepSeek」预设。
    - **OpenRouter 路由**：优先首字延迟（TTFT）最低的供应商，吞吐低于 100 tok/s 的排到后面（`sort: latency` + `preferred_min_throughput`）。
      - 只选支持 JSON 输出和推理开关的供应商（`require_parameters`），失败允许回退。

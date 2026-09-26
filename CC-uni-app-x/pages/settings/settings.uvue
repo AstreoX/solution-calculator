@@ -100,7 +100,7 @@
 				<!-- 说明 -->
 				<view class="card mt14">
 					<text class="h2">说明</text>
-					<text class="note mt10">API Key 保存在本机（首次安装时预置了 OpenRouter 测试 Key）。识别时照片会上传给所选供应商，建议时会发送配方组分与浓度。</text>
+					<text class="note mt10">API Key 只保存在本机，需要自己到供应商处申请后填写。识别时照片会上传给所选供应商，建议时会发送配方组分与浓度。</text>
 					<text class="note mt6">DeepSeek V4.1 Flash：OpenRouter 上的模型名为 deepseek/deepseek-v4.1-flash，DeepSeek 官方接口上为 deepseek-flash，均支持图片输入。</text>
 					<text class="note mt6">OpenRouter 会优先路由到首字延迟最低、吞吐不低于 100 tok/s 的供应商。</text>
 					<text class="note mt6">未配置或离线时，扫描可手动填写，相容性检查使用离线规则库。</text>

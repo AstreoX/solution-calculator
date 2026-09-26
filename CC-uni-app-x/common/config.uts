@@ -37,10 +37,6 @@ export type OcrConfig = {
 	timeoutMs : number
 }
 
-// 设置页视觉模型的默认 API Key（首次安装时填入 OpenRouter 设置）。
-// 这是你提供的有限额测试 Key：会被打进安装包，公开发布前请清空或换成正式 Key。
-export const VLM_DEFAULT_KEY = ''
-
 // 开发自检用：为 true 时各页面载入设计稿里的示例数据（用于与设计稿逐像素对照），正式包必须为 false
 export const DEMO = false
 

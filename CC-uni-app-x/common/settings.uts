@@ -1,8 +1,6 @@
 // 视觉模型（VLM）供应商设置：标签扫描 OCR 与多组分相容性建议共用，保存在本机
 // 首页右上角齿轮进入设置页修改；未填 API Key 时回退到 config.uts 里的配置
 
-import { VLM_DEFAULT_KEY } from './config.uts'
-
 export type VlmPreset = {
 	id : string
 	name : string
@@ -31,7 +29,7 @@ export const PRESETS : VlmPreset[] = [
 const KEY = 'vlm-settings'
 
 function defaults() : VlmSettings {
-	return { preset: PRESETS[0].id, baseUrl: PRESETS[0].baseUrl, apiKey: VLM_DEFAULT_KEY, model: PRESETS[0].model, ocrOn: true, suggestOn: true } as VlmSettings
+	return { preset: PRESETS[0].id, baseUrl: PRESETS[0].baseUrl, apiKey: '', model: PRESETS[0].model, ocrOn: true, suggestOn: true } as VlmSettings
 }
 
 function load() : VlmSettings {

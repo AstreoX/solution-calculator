@@ -34,6 +34,14 @@
 			}
 		},
 		{
+			"path": "pages/settings/cache",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTextStyle": "black",
+				"backgroundColor": "#F3F4F1"
+			}
+		},
+		{
 			"path": "pages/settings/about",
 			"style": {
 				"navigationStyle": "custom",

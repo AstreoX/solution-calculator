@@ -30,6 +30,16 @@
 						</view>
 						<image class="chev" src="/static/icons/chevr-8C959C.svg"></image>
 					</view>
+					<view class="mrow mrow-sep" @click="open('cache')">
+						<view class="mic">
+							<image class="ico20" src="/static/icons/db-1F5FAD.svg"></image>
+						</view>
+						<view class="mtx">
+							<text class="sw-t">缓存管理</text>
+							<text class="lbl">{{ cacheSub }}</text>
+						</view>
+						<image class="chev" src="/static/icons/chevr-8C959C.svg"></image>
+					</view>
 				</view>
 
 				<text class="grp">关于</text>
@@ -55,6 +65,9 @@
 	import { PRESETS, vlm, vlmReady } from '@/common/settings.uts'
 	import { upd } from '@/common/update.uts'
 	import { rstore } from '@/common/recipes.uts'
+	import { prefs, sizeText } from '@/common/prefs.uts'
+	import { onlineCacheStat } from '@/common/online.uts'
+	import { llmCacheStat } from '@/common/llm.uts'
 
 	const win = uni.getWindowInfo()
 	const topPad = Math.max(56, win.statusBarHeight + 9)
@@ -76,6 +89,21 @@
 		if (upd.hasUpdate && r != null) return cur + ' · 新版本 ' + r.versionName
 		if (upd.unread > 0) return cur + ' · ' + upd.unread.toFixed(0) + ' 条新公告'
 		return cur
+	})
+
+	// 缓存占用：每次回到菜单时刷新
+	const cacheBytes = ref(0)
+	function refreshCache() {
+		cacheBytes.value = onlineCacheStat().bytes + llmCacheStat().bytes
+	}
+	onShow(() => {
+		refreshCache()
+	})
+
+	const cacheSub = computed(() : string => {
+		const parts : string[] = [cacheBytes.value > 0 ? '占用 ' + sizeText(cacheBytes.value) : '暂无缓存']
+		if (!prefs.online) parts.push('联网查询已关闭')
+		return parts.join(' · ')
 	})
 
 	function open(p : string) {

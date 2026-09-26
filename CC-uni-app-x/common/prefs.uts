@@ -1,0 +1,55 @@
+// 缓存相关的偏好设置（设置 → 缓存管理），保存在本机
+
+export type Prefs = {
+	online : boolean // 离线库查不到时联网查询
+	missDays : number // 联网没查到的结果保留几天后可重试
+	aiCache : boolean // 按配方缓存 AI 复核结果
+	remember : boolean // 记住各页面的上次输入
+}
+
+export type CacheStat = {
+	count : number
+	extra : number // 查询缓存里「未找到」的条数
+	bytes : number
+}
+
+const KEY = 'prefs'
+
+function load() : Prefs {
+	const p = { online: true, missDays: 3, aiCache: true, remember: true } as Prefs
+	try {
+		const s = uni.getStorageSync(KEY)
+		if (s != null && typeof s == 'string' && (s as string).length > 0) {
+			const o = JSON.parseObject(s as string)
+			if (o != null) {
+				p.online = o.getBoolean('online', true)
+				p.missDays = o.getNumber('missDays', 3)
+				p.aiCache = o.getBoolean('aiCache', true)
+				p.remember = o.getBoolean('remember', true)
+			}
+		}
+	} catch (e) { }
+	return p
+}
+
+export const prefs = reactive<Prefs>(load())
+
+export function savePrefs() {
+	uni.setStorageSync(KEY, JSON.stringify({ online: prefs.online, missDays: prefs.missDays, aiCache: prefs.aiCache, remember: prefs.remember } as UTSJSONObject))
+}
+
+// UTF-8 字节数（缓存大小的估算）
+export function utf8Bytes(s : string) : number {
+	let n = 0
+	for (let i = 0; i < s.length; i++) {
+		const c = s.charCodeAt(i)!
+		n += c < 0x80 ? 1 : (c < 0x800 ? 2 : 3)
+	}
+	return n
+}
+
+export function sizeText(bytes : number) : string {
+	if (bytes < 1024) return bytes.toFixed(0) + ' B'
+	if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB'
+	return (bytes / 1048576).toFixed(1) + ' MB'
+}

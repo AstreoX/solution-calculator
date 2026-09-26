@@ -1,0 +1,230 @@
+<template>
+	<view class="set-page">
+		<scroll-view class="set-scroller" direction="vertical" :show-scrollbar="false">
+			<view class="set-content" :style="{ paddingTop: topPad + 'px' }">
+				<set-header title="缓存管理"></set-header>
+
+				<!-- 查询缓存 -->
+				<view class="card mt14">
+					<view class="row aic">
+						<text class="h2 f1">查询缓存</text>
+						<text class="lbl">{{ sizeOf(qStat.bytes) }}</text>
+					</view>
+					<text class="set-note mt6">离线库查不到的名称会联网查询（英文名 / CAS 查 PubChem，中文名查 Wikidata），结果缓存在本机，之后离线也能用。</text>
+					<text class="stat mt10">{{ qText }}</text>
+					<view class="sw-row sw-sep mt10">
+						<view class="f1">
+							<text class="sw-t">联网查询</text>
+							<text class="lbl">关闭后只用离线库和已缓存的结果</text>
+						</view>
+						<switch :checked="prefs.online" color="#1F5FAD" @change="onOnline($event as UniSwitchChangeEvent)"></switch>
+					</view>
+					<view class="sw-sep pt10">
+						<text class="sw-t">「未找到」的结果保留</text>
+						<text class="lbl">期间不再重复联网查询，到期后会重试</text>
+						<view class="row mt10">
+							<view v-for="(d, i) in MISS_DAYS" :key="i" :class="['chip', i > 0 ? 'ml6' : '', prefs.missDays == d ? 'chip-on' : '']" @click="setMiss(d)">
+								<text :class="['chip-c', prefs.missDays == d ? 'chip-t-on' : '']">{{ d.toFixed(0) }} 天</text>
+							</view>
+						</view>
+					</view>
+					<view class="clr mt14" @click="clearQuery">
+						<text class="clr-t">清除查询缓存</text>
+					</view>
+				</view>
+
+				<!-- 配方缓存 -->
+				<view class="card mt14">
+					<view class="row aic">
+						<text class="h2 f1">配方缓存</text>
+						<text class="lbl">{{ sizeOf(aStat.bytes) }}</text>
+					</view>
+					<text class="set-note mt6">多组分配方的 AI 复核结果按配方缓存：同一配方再次打开时直接显示，不重复请求，离线也能看。</text>
+					<text class="stat mt10">{{ aStat.count > 0 ? '已缓存 ' + aStat.count.toFixed(0) + ' 个配方的复核结果' : '暂无缓存' }}</text>
+					<view class="sw-row sw-sep mt10">
+						<view class="f1">
+							<text class="sw-t">缓存 AI 复核结果</text>
+							<text class="lbl">关闭后每次都重新请求模型</text>
+						</view>
+						<switch :checked="prefs.aiCache" color="#1F5FAD" @change="onAiCache($event as UniSwitchChangeEvent)"></switch>
+					</view>
+					<view class="clr mt14" @click="clearAi">
+						<text class="clr-t">清除配方缓存</text>
+					</view>
+				</view>
+
+				<!-- 输入记忆 -->
+				<view class="card mt14">
+					<view class="row aic">
+						<text class="h2 f1">输入记忆</text>
+						<text class="lbl">{{ sizeOf(iStat.bytes) }}</text>
+					</view>
+					<text class="set-note mt6">配制、稀释、多组分页的输入会自动保存，重启 App 后恢复。保存的配方不受影响。</text>
+					<view class="sw-row sw-sep mt10">
+						<view class="f1">
+							<text class="sw-t">记住上次输入</text>
+							<text class="lbl">关闭后下次启动时各页面为空</text>
+						</view>
+						<switch :checked="prefs.remember" color="#1F5FAD" @change="onRemember($event as UniSwitchChangeEvent)"></switch>
+					</view>
+					<view class="clr mt14" @click="clearInputs">
+						<text class="clr-t">清除已保存的输入</text>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+		<app-dialog></app-dialog>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { prefs, savePrefs, sizeText, CacheStat } from '@/common/prefs.uts'
+	import { onlineCacheStat, clearOnlineCache } from '@/common/online.uts'
+	import { llmCacheStat, clearLlmCache } from '@/common/llm.uts'
+	import { savedInputStat, clearSavedInputs } from '@/common/store.uts'
+	import { dlg, confirmDialog, closeDialog } from '@/common/dialog.uts'
+
+	const win = uni.getWindowInfo()
+	const topPad = Math.max(56, win.statusBarHeight + 9)
+	const MISS_DAYS = [1, 3, 7, 30]
+
+	const qStat = ref<CacheStat>(onlineCacheStat())
+	const aStat = ref<CacheStat>(llmCacheStat())
+	const iStat = ref<CacheStat>(savedInputStat())
+
+	const qText = computed(() : string => {
+		const s = qStat.value
+		if (s.count + s.extra == 0) return '暂无缓存'
+		return '已缓存 ' + s.count.toFixed(0) + ' 个化合物' + (s.extra > 0 ? '，' + s.extra.toFixed(0) + ' 个未找到' : '')
+	})
+
+	function refresh() {
+		qStat.value = onlineCacheStat()
+		aStat.value = llmCacheStat()
+		iStat.value = savedInputStat()
+	}
+
+	function sizeOf(b : number) : string {
+		return b > 0 ? sizeText(b) : ''
+	}
+
+	function onOnline(e : UniSwitchChangeEvent) {
+		prefs.online = e.detail.value
+		savePrefs()
+	}
+	function onAiCache(e : UniSwitchChangeEvent) {
+		prefs.aiCache = e.detail.value
+		savePrefs()
+	}
+	function onRemember(e : UniSwitchChangeEvent) {
+		prefs.remember = e.detail.value
+		savePrefs()
+		if (!prefs.remember) {
+			clearSavedInputs()
+			refresh()
+		}
+	}
+	function setMiss(d : number) {
+		prefs.missDays = d
+		savePrefs()
+	}
+
+	function clearQuery() {
+		confirmDialog('清除查询缓存？', '联网查到的化合物会被删除，之后需要重新联网查询。', '清除', '取消', true, () => {
+			clearOnlineCache()
+			refresh()
+			uni.showToast({ title: '已清除', icon: 'none' })
+		})
+	}
+	function clearAi() {
+		confirmDialog('清除配方缓存？', '已缓存的 AI 复核结果会被删除，之后打开配方时重新请求模型。', '清除', '取消', true, () => {
+			clearLlmCache()
+			refresh()
+			uni.showToast({ title: '已清除', icon: 'none' })
+		})
+	}
+	function clearInputs() {
+		confirmDialog('清除已保存的输入？', '当前页面上的内容不变，下次启动时各页面为空。保存的配方不受影响。', '清除', '取消', true, () => {
+			clearSavedInputs()
+			refresh()
+			uni.showToast({ title: '已清除', icon: 'none' })
+		})
+	}
+
+	onBackPress((options : OnBackPressOptions) : boolean | null => {
+		if (dlg.show) {
+			closeDialog()
+			return true
+		}
+		return false
+	})
+</script>
+
+<style>
+	.mt6 {
+		margin-top: 6px;
+	}
+
+	.mt10 {
+		margin-top: 10px;
+	}
+
+	.mt14 {
+		margin-top: 14px;
+	}
+
+	.ml6 {
+		margin-left: 6px;
+	}
+
+	.pt10 {
+		padding-top: 10px;
+	}
+
+	.stat {
+		font-family: ns5;
+		font-size: 14px;
+		line-height: 20px;
+		color: #16191B;
+	}
+
+	.sw-row {
+		flex-direction: row;
+		align-items: center;
+		padding: 10px 0;
+	}
+
+	.sw-sep {
+		border-top: 1px solid #E6E8E3;
+	}
+
+	.sw-t {
+		font-family: ns5;
+		font-size: 15px;
+		line-height: 21px;
+		color: #16191B;
+	}
+
+	.chip-c {
+		font-family: ns5;
+		font-size: 13px;
+		line-height: 19px;
+		color: #16191B;
+	}
+
+	.clr {
+		height: 44px;
+		border-radius: 12px;
+		border: 1px solid #E8C9C5;
+		background-color: #FFFFFF;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.clr-t {
+		font-family: ns5;
+		font-size: 15px;
+		line-height: 21px;
+		color: #A3261B;
+	}
+</style>

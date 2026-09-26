@@ -15,6 +15,8 @@ export type MixComp = {
 
 type LlmCb = (list : Warn[] | null, err : string) => void
 
+import { prefs, CacheStat, utf8Bytes } from './prefs.uts'
+
 const CACHE_KEY = 'llm-mix-cache'
 const cache = new Map<string, string>() // key → JSON 字符串
 let cacheLoaded = false
@@ -95,7 +97,23 @@ function parseWarns(content : string) : Warn[] | null {
 	return out
 }
 
+export function llmCacheStat() : CacheStat {
+	loadCache()
+	let bytes = 0
+	cache.forEach((v : string, k : string) => {
+		bytes += utf8Bytes(k) + utf8Bytes(v)
+	})
+	return { count: cache.size, extra: 0, bytes: bytes } as CacheStat
+}
+
+export function clearLlmCache() {
+	loadCache()
+	cache.clear()
+	uni.removeStorageSync(CACHE_KEY)
+}
+
 export function llmCached(key : string) : Warn[] | null {
+	if (!prefs.aiCache) return null
 	loadCache()
 	const s = cache.get(key)
 	if (s == null || s.length == 0) return null
@@ -145,8 +163,10 @@ export function analyzeMix(comps : MixComp[], vol : string, rules : Warn[], cb :
 			cb(null, 'LLM 结果无法解析')
 			return
 		}
-		cache.set(key, content)
-		saveCache()
+		if (prefs.aiCache) {
+			cache.set(key, content)
+			saveCache()
+		}
 		cb(list, '')
 	})
 }

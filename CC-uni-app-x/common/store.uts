@@ -1,6 +1,10 @@
-// 各页面输入状态的本地保存（重启 App 后恢复）
+// 各页面输入状态的本地保存（重启 App 后恢复；设置 → 缓存管理 可关闭）
+import { prefs, CacheStat, utf8Bytes } from './prefs.uts'
+
+const PANES = ['prep', 'dilu', 'multi']
 
 export function loadState(key : string) : UTSJSONObject | null {
+	if (!prefs.remember) return null
 	try {
 		const s = uni.getStorageSync('state:' + key)
 		if (s == null) return null
@@ -18,6 +22,7 @@ export function loadState(key : string) : UTSJSONObject | null {
 const timers = new Map<string, number>()
 
 export function saveState(key : string, o : UTSJSONObject) {
+	if (!prefs.remember) return
 	const t = timers.get(key)
 	if (t != null) clearTimeout(t)
 	const str = JSON.stringify(o)
@@ -25,4 +30,25 @@ export function saveState(key : string, o : UTSJSONObject) {
 		timers.delete(key)
 		uni.setStorageSync('state:' + key, str)
 	}, 400))
+}
+
+export function savedInputStat() : CacheStat {
+	let n = 0, bytes = 0
+	for (let i = 0; i < PANES.length; i++) {
+		const s = uni.getStorageSync('state:' + PANES[i])
+		if (s != null && typeof s == 'string' && (s as string).length > 0) {
+			n++
+			bytes += utf8Bytes(s as string)
+		}
+	}
+	return { count: n, extra: 0, bytes: bytes } as CacheStat
+}
+
+// 清除已保存的输入（当前屏幕上的内容不变，下次启动时各页面为空）
+export function clearSavedInputs() {
+	timers.forEach((t : number, k : string) => {
+		clearTimeout(t)
+	})
+	timers.clear()
+	for (let i = 0; i < PANES.length; i++) uni.removeStorageSync('state:' + PANES[i])
 }

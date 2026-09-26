@@ -2,6 +2,7 @@
 // 查到的结果（含未找到）写入本地缓存文件，之后离线也能用
 import { molarMass, normF } from './chem.uts'
 import { dbTick } from './db.uts'
+import { prefs, CacheStat, utf8Bytes } from './prefs.uts'
 
 export type OnlineHit = {
 	f : string
@@ -12,7 +13,10 @@ export type OnlineHit = {
 }
 
 const CACHE_FILE = 'chem-lookup-cache.json'
-const MISS_TTL = 3 * 24 * 3600 * 1000 // 未找到的结果 3 天后可重试
+// 未找到的结果保留几天后可重试（设置 → 缓存管理，默认 3 天）
+function missTtl() : number {
+	return prefs.missDays * 24 * 3600 * 1000
+}
 
 const cache = new Map<string, OnlineHit>()
 const pending = new Set<string>()
@@ -45,20 +49,46 @@ function ensureLoaded() {
 	}
 }
 
+function serialize() : string {
+	const o = {} as UTSJSONObject
+	cache.forEach((v : OnlineHit, k : string) => {
+		o.set(k, { f: v.f, zh: v.zh, en: v.en, M: v.M, t: v.t } as UTSJSONObject)
+	})
+	return JSON.stringify(o)
+}
+
+function writeNow() {
+	try {
+		uni.getFileSystemManager().writeFileSync(cachePath(), serialize(), 'utf-8')
+	} catch (e) {
+		console.log('save cache failed', e)
+	}
+}
+
 function scheduleSave() {
 	if (saveTimer != 0) clearTimeout(saveTimer)
 	saveTimer = setTimeout(() => {
 		saveTimer = 0
-		const o = {} as UTSJSONObject
-		cache.forEach((v : OnlineHit, k : string) => {
-			o.set(k, { f: v.f, zh: v.zh, en: v.en, M: v.M, t: v.t } as UTSJSONObject)
-		})
-		try {
-			uni.getFileSystemManager().writeFileSync(cachePath(), JSON.stringify(o), 'utf-8')
-		} catch (e) {
-			console.log('save cache failed', e)
-		}
+		writeNow()
 	}, 800)
+}
+
+export function onlineCacheStat() : CacheStat {
+	ensureLoaded()
+	let misses = 0
+	cache.forEach((v : OnlineHit, k : string) => {
+		if (v.f.length == 0) misses++
+	})
+	return { count: cache.size - misses, extra: misses, bytes: cache.size == 0 ? 0 : utf8Bytes(serialize()) } as CacheStat
+}
+
+export function clearOnlineCache() {
+	ensureLoaded()
+	cache.clear()
+	if (saveTimer != 0) clearTimeout(saveTimer)
+	saveTimer = 0
+	writeNow()
+	dbTick.value = dbTick.value + 1
 }
 
 function keyOf(q : string) : string {
@@ -91,13 +121,13 @@ export function onlineCached(q : string, fetch : boolean) : OnlineHit | null {
 	if (k.length == 0) return null
 	const h = cache.get(k)
 	if (h != null) {
-		if (h.f.length == 0 && Date.now() - h.t > MISS_TTL && fetch) {
+		if (h.f.length == 0 && Date.now() - h.t > missTtl() && fetch && prefs.online) {
 			cache.delete(k)
 		} else {
 			return h
 		}
 	}
-	if (fetch) lookup(q)
+	if (fetch && prefs.online) lookup(q)
 	return null
 }
 

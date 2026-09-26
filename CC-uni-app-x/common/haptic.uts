@@ -1,0 +1,146 @@
+// 触感反馈：旋钮每转过一格「咔哒」一下
+// uni.vibrateShort 在安卓上是固定约 15ms 的马达脉冲，连着转会糊成一片；这里直接用系统振动，按手机能力由细到粗选用：
+//   振动原语（Android 11+，线性马达）→ 预置 TICK / CLICK 效果（Android 10+）→ 定幅短脉冲（Android 8+）→ 普通短振
+// 种类：fine 微调一格；major 微调走到长刻度（每 5 格）；coarse 粗调一格；lock 进入 SAVE；limit 转到头
+// #ifdef APP-ANDROID
+import Context from 'android.content.Context'
+import Build from 'android.os.Build'
+import Vibrator from 'android.os.Vibrator'
+import VibrationEffect from 'android.os.VibrationEffect'
+// #endif
+
+const GAP = 22 // 两格之间的最小间隔（ms），再密马达来不及停，手感会变成嗡嗡声
+const MAX_PEND = 3 // 转得太快时最多补振 3 格，松手后不拖尾
+
+let lastAt = 0
+let pend : string[] = []
+let draining = false
+
+// #ifdef APP-ANDROID
+let vib : Vibrator | null = null
+let tier = -1 // 0 不可用；1 普通短振；2 定幅脉冲；3 预置效果；4 振动原语
+let lowTick = false
+
+function ready() : boolean {
+	if (tier < 0) {
+		tier = 0
+		try {
+			const v = UTSAndroid.getAppContext()!.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+			if (v.hasVibrator()) {
+				vib = v
+				const sdk = Build.VERSION.SDK_INT
+				if (sdk >= 30 && primOk(v)) {
+					tier = 4
+					lowTick = sdk >= 31 && lowOk(v)
+				} else if (sdk >= 29) tier = 3
+				else if (sdk >= 26) tier = 2
+				else tier = 1
+			}
+		} catch (e) { }
+	}
+	return tier > 0
+}
+
+function primOk(v : Vibrator) : boolean {
+	return v.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_TICK, VibrationEffect.Composition.PRIMITIVE_CLICK)
+}
+
+function lowOk(v : Vibrator) : boolean {
+	return v.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_LOW_TICK)
+}
+
+function prim(v : Vibrator, kind : string) {
+	let id = VibrationEffect.Composition.PRIMITIVE_TICK
+	let scale = 1.0
+	if (kind == 'fine') {
+		if (lowTick) {
+			id = VibrationEffect.Composition.PRIMITIVE_LOW_TICK
+			scale = 0.7
+		} else scale = 0.4
+	} else if (kind == 'major') scale = 0.75
+	else if (kind == 'lock') id = VibrationEffect.Composition.PRIMITIVE_CLICK
+	else if (kind == 'limit') {
+		id = VibrationEffect.Composition.PRIMITIVE_CLICK
+		scale = 0.6
+	}
+	v.vibrate(VibrationEffect.startComposition().addPrimitive(id, scale.toFloat()).compose())
+}
+
+function predef(v : Vibrator, kind : string) {
+	const id = kind == 'lock' || kind == 'limit' ? VibrationEffect.EFFECT_CLICK : VibrationEffect.EFFECT_TICK
+	v.vibrate(VibrationEffect.createPredefined(id))
+}
+
+// 没有调幅能力的马达（多为转子马达）太短会感觉不到，时长给足一些
+function pulseMs(kind : string, amp : boolean) : number {
+	if (kind == 'fine') return amp ? 6 : 10
+	if (kind == 'major' || kind == 'coarse') return amp ? 8 : 14
+	if (kind == 'lock') return amp ? 18 : 30
+	return amp ? 14 : 22
+}
+
+function pulseAmp(kind : string) : number {
+	if (kind == 'fine') return 60
+	if (kind == 'major') return 120
+	if (kind == 'coarse') return 150
+	if (kind == 'lock') return 230
+	return 180
+}
+
+function shot(v : Vibrator, kind : string) {
+	let amp = VibrationEffect.DEFAULT_AMPLITUDE
+	const ac = v.hasAmplitudeControl()
+	if (ac) amp = pulseAmp(kind).toInt()
+	v.vibrate(VibrationEffect.createOneShot(pulseMs(kind, ac).toLong(), amp))
+}
+
+function fire(kind : string) {
+	if (!ready()) return
+	const v = vib!
+	try {
+		if (tier == 4) prim(v, kind)
+		else if (tier == 3) predef(v, kind)
+		else if (tier == 2) shot(v, kind)
+		else v.vibrate(pulseMs(kind, false).toLong())
+	} catch (e) { }
+}
+// #endif
+
+// #ifndef APP-ANDROID
+function fire(kind : string) {
+	try {
+		uni.vibrateShort({ type: kind == 'lock' || kind == 'limit' ? 'medium' : 'light' } as VibrateShortOptions)
+	} catch (e) { }
+}
+// #endif
+
+function drain() {
+	if (draining || pend.length == 0) return
+	const wait = lastAt + GAP - Date.now()
+	if (wait > 0) {
+		draining = true
+		setTimeout(() => {
+			draining = false
+			drain()
+		}, wait)
+		return
+	}
+	const kind = pend.shift()!
+	lastAt = Date.now()
+	fire(kind)
+	drain()
+}
+
+// 转过的格子：每格一下，依次排开（一次触摸事件跨了好几格时也一格一格振）
+export function hapticSteps(kinds : string[]) {
+	for (let i = 0; i < kinds.length; i++) pend.push(kinds[i])
+	while (pend.length > MAX_PEND) pend.shift()
+	drain()
+}
+
+// 锁定、到头等单次提示：立即振，并清掉还没振完的格子
+export function haptic(kind : string) {
+	pend = []
+	lastAt = Date.now()
+	fire(kind)
+}

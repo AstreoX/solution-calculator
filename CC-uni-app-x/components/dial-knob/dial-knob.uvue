@@ -27,6 +27,7 @@
 	// 旋钮：圆心在屏幕右缘外；外圈粗调、内圈微调、最内侧 SAVE（进入即锁定，松手保存）
 	import { DialSpec } from '@/common/types.uts'
 	import { num, numStr, sig } from '@/common/fmt.uts'
+	import { haptic, hapticSteps } from '@/common/haptic.uts'
 
 	defineOptions({ styleIsolation: 'app' })
 
@@ -67,6 +68,7 @@
 	let downX = 0
 	let downY = 0
 	let armed = false
+	let atLimit = false // 已经顶到最小 / 最大值（只在刚顶到时振一下）
 
 	const cy = computed(() : number => Math.min(H - 204, Math.max(300, props.anchorY + 100)))
 
@@ -171,10 +173,12 @@
 	function zone(d : number) : string {
 		return d < R2 ? 'save' : (d <= R1 ? 'fine' : 'coarse')
 	}
-	function buzz(strong : boolean) {
-		try {
-			uni.vibrateShort({ type: strong ? 'medium' : 'light' } as VibrateShortOptions)
-		} catch (e) { }
+	// 这一格的手感：粗调一格；微调走到长刻度（与 draw() 里的长刻度一致）稍重，其余最轻
+	function stepKind(v : number | null, z : string) : string {
+		if (z == 'coarse') return 'coarse'
+		if (v == null) return 'fine'
+		const fs = fineStep(v, props.spec, 1)
+		return (Math.round(v / fs) % 5 + 5) % 5 == 0 ? 'major' : 'fine'
 	}
 
 	function finish(commit : boolean) {
@@ -185,6 +189,7 @@
 		drag = true
 		moved = false
 		hasLast = false
+		atLimit = false
 		if (hasPoint) {
 			startSet = true
 			downX = x
@@ -214,7 +219,7 @@
 		if (z == 'save') {
 			// 进入 SAVE：锁定数值，不再随手指抖动变化
 			if (armed && !locked.value) {
-				buzz(true)
+				haptic('lock')
 				locked.value = true
 				acc.value = 0
 			}
@@ -255,25 +260,35 @@
 		const s0 = valStr()
 		let s = s0
 		let v = num(s)
-		let changed = false
 		let guard = 0
+		// 每转过一格记一下手感；数值没变说明顶到头了
+		const kinds : string[] = []
+		let stuck = false
 		while (a >= 1 && guard < 40) {
-			s = stepVal(v, sp, z, 1)
+			const ns = stepVal(v, sp, z, 1)
+			if (ns != s) kinds.push(stepKind(num(ns), z))
+			else stuck = true
+			s = ns
 			v = num(s)
 			a -= 1
-			changed = true
 			guard++
 		}
 		while (a <= -1 && guard < 40) {
-			s = stepVal(v, sp, z, -1)
+			const ns = stepVal(v, sp, z, -1)
+			if (ns != s) kinds.push(stepKind(num(ns), z))
+			else stuck = true
+			s = ns
 			v = num(s)
 			a += 1
-			changed = true
 			guard++
 		}
-		if (changed && s != s0) {
-			emit('change', s)
-			buzz(false)
+		if (s != s0) emit('change', s)
+		if (kinds.length > 0) {
+			atLimit = false
+			hapticSteps(kinds)
+		} else if (stuck && !atLimit) {
+			atLimit = true
+			haptic('limit')
 		}
 		acc.value = a
 		mode.value = z

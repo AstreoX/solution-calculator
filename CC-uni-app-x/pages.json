@@ -53,7 +53,7 @@
 	"globalStyle": {
 		"navigationStyle": "custom",
 		"navigationBarTextStyle": "black",
-		"navigationBarTitleText": "化学计算器",
+		"navigationBarTitleText": "配液计算器",
 		"navigationBarBackgroundColor": "#F3F4F1",
 		"backgroundColor": "#F3F4F1"
 	},

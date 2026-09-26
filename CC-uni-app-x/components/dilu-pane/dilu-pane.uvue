@@ -16,7 +16,22 @@
 						</view>
 					</view>
 
-					<view class="sublbl mt14">
+					<!-- 化学式：同单位族稀释时可选（仅用于显示），mol ↔ g 换算时必填 -->
+					<view class="mt14">
+						<text class="lbl">{{ calc.needM ? '化学式' : '化学式（可选）' }}</text>
+						<view :class="['fld', 'mt10', focus == 'formula' ? 'fld-on' : '']">
+							<input class="inp" :value="formula" placeholder="如 HCl、NaOH，也可输入名称" placeholder-class="ph" @input="onInput('formula', $event as UniInputEvent)" @focus="focus = 'formula'" @blur="blurField('formula')" />
+							<text v-if="calc.mLine.length > 0" class="mline ml8">{{ calc.mLine }}</text>
+						</view>
+						<text v-if="res.status == 'bad'" class="bad mt6">无法识别该化学式</text>
+					</view>
+
+					<view v-if="stockName.length > 0" class="stock mt10">
+						<image class="ico16" src="/static/icons/check-1F5FAD.svg"></image>
+						<text class="stock-t">{{ stockName }}</text>
+					</view>
+
+					<view class="sublbl mt16">
 						<text class="lbl">原液 C</text>
 						<text class="sub">1</text>
 					</view>
@@ -34,19 +49,6 @@
 						<input :focus="focus == 'c2'" class="inp inp-lg" type="digit" :value="c2" @input="onInput('c2', $event as UniInputEvent)" @focus="focus = 'c2'" @blur="blurField('c2')" />
 						<view v-if="focus != 'c2'" class="lp-cover" @touchstart="lpStart('c2', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('c2')"></view>
 						<unit-select class="ml8" :value="unit2" :ids="UIDS" :labels="ULABELS" :width="92" @change="setUnit2"></unit-select>
-					</view>
-
-					<view v-if="calc.needM">
-						<text class="lbl mt16">化学式</text>
-						<view :class="['fld', 'mt10', focus == 'formula' ? 'fld-on' : '']">
-							<input class="inp" :value="formula" placeholder="如 HCl" placeholder-class="ph" @input="onInput('formula', $event as UniInputEvent)" @focus="focus = 'formula'" @blur="blurField('formula')" />
-							<text class="mline ml8">{{ calc.mLine }}</text>
-						</view>
-					</view>
-
-					<view v-if="stockName.length > 0" class="stock mt10">
-						<image class="ico16" src="/static/icons/check-1F5FAD.svg"></image>
-						<text class="stock-t">{{ stockName }}</text>
 					</view>
 
 					<view class="sublbl mt16">
@@ -153,12 +155,16 @@
 	}
 
 	function setVal(k : string, v : string) {
+		// 手动改原液浓度或化学式后，扫描得到的原液名称不再可信
 		if (k == 'c1') {
 			c1.value = v
 			stockName.value = ''
 		} else if (k == 'c2') c2.value = v
 		else if (k == 'v2') v2.value = v
-		else if (k == 'formula') formula.value = v
+		else if (k == 'formula') {
+			formula.value = v
+			stockName.value = ''
+		}
 		persist()
 	}
 	function getVal(k : string) : string {
@@ -271,7 +277,7 @@
 			return o
 		}
 		if (needM && !(M > 0)) {
-			warn(r.status == 'pending' ? '正在查询化学式…' : '跨单位换算需填化学式')
+			warn(r.status == 'pending' ? '正在查询化学式…' : (r.status == 'bad' ? '化学式无法识别' : '跨单位换算需填化学式'))
 			return o
 		}
 		if (C1t == null || C1t < C2) {
@@ -421,6 +427,10 @@
 		padding: 0 4px;
 	}
 
+	.mt6 {
+		margin-top: 6px;
+	}
+
 	.mt10 {
 		margin-top: 10px;
 	}
@@ -476,6 +486,13 @@
 		font-size: 13px;
 		line-height: 19px;
 		color: #4F555A;
+	}
+
+	.bad {
+		font-family: ns4;
+		font-size: 13px;
+		line-height: 19.5px;
+		color: #8A4B00;
 	}
 
 	.stock {

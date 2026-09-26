@@ -325,6 +325,51 @@
 		height: 20px;
 	}
 
+	/* 设置类页面（设计稿之外新增，沿用同一套视觉） */
+	.set-page {
+		flex: 1;
+		background-color: #F3F4F1;
+	}
+
+	.set-scroller {
+		flex: 1;
+	}
+
+	.set-content {
+		padding: 56px 16px 20px 16px;
+	}
+
+	.set-note {
+		font-family: ns4;
+		font-size: 13px;
+		line-height: 20.8px;
+		color: #4F555A;
+	}
+
+	.set-acts {
+		padding-top: 12px;
+		padding-left: 16px;
+		padding-right: 16px;
+		border-top: 1px solid #DCDFD8;
+		background-color: #F3F4F1;
+	}
+
+	.set-save {
+		height: 52px;
+		border-radius: 14px;
+		background-color: #1F5FAD;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.set-save-t {
+		font-family: ns7;
+		font-size: 16px;
+		line-height: 23px;
+		color: #FFFFFF;
+	}
+
 	.ico16 {
 		width: 16px;
 		height: 16px;

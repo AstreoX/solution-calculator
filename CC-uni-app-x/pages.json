@@ -16,6 +16,22 @@
 				"navigationBarTextStyle": "black",
 				"backgroundColor": "#F3F4F1"
 			}
+		},
+		{
+			"path": "pages/settings/model",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTextStyle": "black",
+				"backgroundColor": "#F3F4F1"
+			}
+		},
+		{
+			"path": "pages/settings/about",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTextStyle": "black",
+				"backgroundColor": "#F3F4F1"
+			}
 		}
 	],
 	"globalStyle": {

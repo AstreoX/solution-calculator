@@ -1,0 +1,46 @@
+<template>
+	<view class="set-header">
+		<view class="set-back" @click="goBack">
+			<image class="set-back-ic" src="/static/icons/back-16191B.svg"></image>
+		</view>
+		<text class="h1 set-title">{{ title }}</text>
+	</view>
+</template>
+
+<script setup lang="uts">
+	defineOptions({ styleIsolation: 'app' })
+
+	const props = defineProps({
+		title: { type: String, default: '' }
+	})
+
+	function goBack() {
+		uni.navigateBack()
+	}
+</script>
+
+<style>
+	.set-header {
+		flex-direction: row;
+		align-items: center;
+		padding: 0 4px;
+	}
+
+	.set-back {
+		width: 36px;
+		height: 36px;
+		border-radius: 18px;
+		background-color: #E3E6E0;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.set-back-ic {
+		width: 20px;
+		height: 20px;
+	}
+
+	.set-title {
+		margin-left: 10px;
+	}
+</style>

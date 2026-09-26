@@ -1,0 +1,123 @@
+<template>
+	<view class="set-page">
+		<scroll-view class="set-scroller" direction="vertical" :show-scrollbar="false">
+			<view class="set-content" :style="{ paddingTop: topPad + 'px' }">
+				<set-header title="版本与公告"></set-header>
+
+				<view class="card mt14">
+					<text class="h2">版本</text>
+					<view class="sw-row mt4">
+						<view class="f1">
+							<text class="sw-t">当前版本 {{ upd.curName.length > 0 ? upd.curName : '—' }}</text>
+							<text :class="['lbl', upd.hasUpdate ? 'c-blue' : '']">{{ verSub }}</text>
+						</view>
+						<view v-if="updOn" class="scan-btn" @click="onCheck">
+							<text class="test-t">{{ upd.hasUpdate ? '更新' : (upd.checking ? '检查中…' : '检查更新') }}</text>
+						</view>
+					</view>
+				</view>
+
+				<view v-if="updOn" class="card mt14">
+					<text class="h2">公告</text>
+					<view v-for="(n, i) in upd.notices" :key="n.id" :class="['ntc', i > 0 ? 'sw-sep' : '']">
+						<view class="row aic">
+							<view v-if="fresh.indexOf(n.id) >= 0" class="ntc-dot"></view>
+							<text :class="['sw-t', 'f1', n.level == 'warn' ? 'c-amber' : '']">{{ n.title }}</text>
+							<text class="lbl ml10">{{ n.date }}</text>
+						</view>
+						<text v-if="n.body.length > 0" class="set-note mt4">{{ n.body }}</text>
+					</view>
+					<view v-if="upd.notices.length == 0" class="ntc">
+						<text class="lbl">暂无公告</text>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+		<update-sheet></update-sheet>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { upd, updateEnabled, checkNow, openUpdate, unreadIds, markAllRead, closeSheet } from '@/common/update.uts'
+
+	const win = uni.getWindowInfo()
+	const topPad = Math.max(56, win.statusBarHeight + 9)
+
+	// 进入页面时记下哪些公告是新的（标小圆点），离开时统一记为已读
+	const updOn = updateEnabled()
+	const fresh = ref<string[]>(unreadIds())
+	const verSub = computed(() : string => {
+		if (!updOn) return '未配置更新地址'
+		const r = upd.latest
+		if (upd.hasUpdate && r != null) return '新版本 ' + r.versionName + ' 可更新'
+		if (upd.checking) return '正在检查…'
+		return r != null ? '已是最新版本' : '点「检查更新」获取最新版本与公告'
+	})
+
+	function onCheck() {
+		if (upd.hasUpdate) openUpdate()
+		else checkNow()
+	}
+
+	onUnload(() => {
+		markAllRead()
+	})
+
+	onBackPress((options : OnBackPressOptions) : boolean | null => {
+		if (upd.sheet.length > 0) {
+			closeSheet()
+			return true
+		}
+		return false
+	})
+</script>
+
+<style>
+	.mt4 {
+		margin-top: 4px;
+	}
+
+	.mt14 {
+		margin-top: 14px;
+	}
+
+	.ml10 {
+		margin-left: 10px;
+	}
+
+	.sw-row {
+		flex-direction: row;
+		align-items: center;
+		padding: 10px 0;
+	}
+
+	.sw-sep {
+		border-top: 1px solid #E6E8E3;
+	}
+
+	.sw-t {
+		font-family: ns5;
+		font-size: 15px;
+		line-height: 21px;
+		color: #16191B;
+	}
+
+	.test-t {
+		font-family: ns5;
+		font-size: 15px;
+		line-height: 21px;
+		color: #1F5FAD;
+	}
+
+	.ntc {
+		padding: 12px 0;
+	}
+
+	.ntc-dot {
+		width: 7px;
+		height: 7px;
+		border-radius: 3.5px;
+		background-color: #1F5FAD;
+		margin-right: 7px;
+	}
+</style>

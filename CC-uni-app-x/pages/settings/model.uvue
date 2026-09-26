@@ -1,0 +1,324 @@
+<template>
+	<view class="set-page">
+		<scroll-view class="set-scroller" direction="vertical" :show-scrollbar="false">
+			<view class="set-content" :style="{ paddingTop: topPad + 'px' }">
+				<set-header title="模型供应商"></set-header>
+
+				<!-- 视觉模型供应商 -->
+				<view class="card mt14">
+					<text class="h2">视觉模型供应商</text>
+					<text class="lbl mt4">标签扫描识别与多组分相容性建议共用</text>
+
+					<text class="lbl mt14">供应商</text>
+					<view v-for="(prow, ri) in presetRows" :key="ri" :class="['row', ri > 0 ? 'mt6' : 'mt10']">
+						<view v-for="(p, i) in prow" :key="i" :class="[p.id.length > 0 ? 'chip' : 'chip-ph', i > 0 ? 'ml6' : '', p.id.length > 0 && form.preset == p.id ? 'chip-on' : '']" @click="pickPreset(p)">
+							<text v-if="p.id.length > 0" :class="['chip-c', form.preset == p.id ? 'chip-t-on' : '']">{{ p.name }}</text>
+						</view>
+					</view>
+
+					<text class="lbl mt16">接口地址</text>
+					<view :class="['fld', 'mt10', focus == 'url' ? 'fld-on' : '']">
+						<input class="inp-s" :value="form.baseUrl" placeholder="https://api.example.com/v1" placeholder-class="ph"
+							@input="onUrl($event as UniInputEvent)" @focus="focus = 'url'" @blur="blurField('url')" />
+					</view>
+
+					<text class="lbl mt16">模型</text>
+					<view :class="['fld', 'mt10', focus == 'model' ? 'fld-on' : '']">
+						<input class="inp-s" :value="form.model" placeholder="模型名称" placeholder-class="ph"
+							@input="onModel($event as UniInputEvent)" @focus="focus = 'model'" @blur="blurField('model')" />
+					</view>
+
+					<text class="lbl mt16">API Key</text>
+					<view :class="['fld', 'mt10', focus == 'key' ? 'fld-on' : '']">
+						<input class="inp-s" :value="form.apiKey" :password="!showKey" placeholder="sk-…" placeholder-class="ph"
+							@input="onKey($event as UniInputEvent)" @focus="focus = 'key'" @blur="blurField('key')" />
+						<view class="eye" @click="showKey = !showKey">
+							<text class="eye-t">{{ showKey ? '隐藏' : '显示' }}</text>
+						</view>
+					</view>
+
+					<view class="row aic mt14">
+						<view class="scan-btn" @click="testConn">
+							<text class="test-t">{{ testing ? '测试中…' : '测试连接' }}</text>
+						</view>
+						<view v-if="testMsg.length > 0" class="row aic f1 ml10">
+							<image class="ico16" :src="testOk ? '/static/icons/check-1F5FAD.svg' : '/static/icons/warn-8A4B00.svg'"></image>
+							<text :class="['test-r', testOk ? 'c-blue' : 'c-amber']">{{ testMsg }}</text>
+						</view>
+					</view>
+				</view>
+
+				<!-- 使用范围 -->
+				<view class="card mt14">
+					<text class="h2">使用范围</text>
+					<view class="sw-row mt10">
+						<view class="f1">
+							<text class="sw-t">标签扫描识别</text>
+							<text class="lbl">拍照后由模型读出标签文字与各字段</text>
+						</view>
+						<switch :checked="form.ocrOn" color="#1F5FAD" @change="onOcr($event as UniSwitchChangeEvent)"></switch>
+					</view>
+					<view class="sw-row sw-sep">
+						<view class="f1">
+							<text class="sw-t">多组分相容性建议</text>
+							<text class="lbl">在离线规则之外，由模型复核配方</text>
+						</view>
+						<switch :checked="form.suggestOn" color="#1F5FAD" @change="onSuggest($event as UniSwitchChangeEvent)"></switch>
+					</view>
+				</view>
+
+				<!-- 说明 -->
+				<view class="card mt14">
+					<text class="h2">说明</text>
+					<text class="set-note mt10">API Key 只保存在本机，需要自己到供应商处申请后填写。识别时照片会上传给所选供应商，建议时会发送配方组分与浓度。</text>
+					<text class="set-note mt6">DeepSeek V4.1 Flash：OpenRouter 上的模型名为 deepseek/deepseek-v4.1-flash，DeepSeek 官方接口上为 deepseek-flash，硅基流动上为 deepseek-ai/DeepSeek-V4.1-Flash，均支持图片输入。</text>
+					<text class="set-note mt6">OpenRouter 会优先路由到首字延迟最低、吞吐不低于 100 tok/s 的供应商。</text>
+					<text class="set-note mt6">未配置或离线时，扫描可手动填写，相容性检查使用离线规则库。</text>
+				</view>
+			</view>
+		</scroll-view>
+
+		<view class="set-acts" :style="{ paddingBottom: actsBottom + 'px' }">
+			<view class="set-save" @click="save">
+				<text class="set-save-t">保存</text>
+				<image class="ico20 ml6" src="/static/icons/checkb-FFFFFF.svg"></image>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { PRESETS, VlmPreset, VlmSettings, vlm, saveVlm, postChat } from '@/common/settings.uts'
+
+	const win = uni.getWindowInfo()
+	const topPad = Math.max(56, win.statusBarHeight + 9)
+	const actsBottom = Math.max(32, win.safeAreaInsets.bottom + 8)
+
+	const form = reactive({
+		preset: vlm.preset, baseUrl: vlm.baseUrl, apiKey: vlm.apiKey, model: vlm.model, ocrOn: vlm.ocrOn, suggestOn: vlm.suggestOn
+	} as VlmSettings)
+	const focus = ref('')
+	const showKey = ref(false)
+	const testing = ref(false)
+	const testOk = ref(false)
+	const testMsg = ref('')
+
+	// 供应商选项每行 3 个，最后一行用占位补齐保证等宽
+	const presetRows = computed(() : VlmPreset[][] => {
+		const out : VlmPreset[][] = []
+		for (let i = 0; i < PRESETS.length; i += 3) {
+			const row : VlmPreset[] = []
+			for (let k = i; k < i + 3; k++) {
+				row.push(k < PRESETS.length ? PRESETS[k] : ({ id: '', name: '', baseUrl: '', model: '' } as VlmPreset))
+			}
+			out.push(row)
+		}
+		return out
+	})
+
+	function blurField(k : string) {
+		if (focus.value == k) focus.value = ''
+	}
+
+	function matchPreset() : string {
+		const u = form.baseUrl.trim().replace(/\/+$/, '')
+		for (let i = 0; i < PRESETS.length; i++) {
+			if (PRESETS[i].baseUrl.length > 0 && PRESETS[i].baseUrl == u) return PRESETS[i].id
+		}
+		return 'custom'
+	}
+
+	function onUrl(e : UniInputEvent) {
+		form.baseUrl = e.detail.value
+		form.preset = matchPreset()
+		testMsg.value = ''
+	}
+	function onModel(e : UniInputEvent) {
+		form.model = e.detail.value
+		testMsg.value = ''
+	}
+	function onKey(e : UniInputEvent) {
+		form.apiKey = e.detail.value
+		testMsg.value = ''
+	}
+	function onOcr(e : UniSwitchChangeEvent) {
+		form.ocrOn = e.detail.value
+	}
+	function onSuggest(e : UniSwitchChangeEvent) {
+		form.suggestOn = e.detail.value
+	}
+
+	function pickPreset(p : VlmPreset) {
+		if (p.id.length == 0) return
+		form.preset = p.id
+		if (p.id != 'custom') {
+			form.baseUrl = p.baseUrl
+			form.model = p.model
+		}
+		testMsg.value = ''
+	}
+
+	function errText(d : UTSJSONObject | null, code : number) : string {
+		if (d != null) {
+			const e = d.getJSON('error')
+			if (e != null) {
+				const m = e.getString('message', '')
+				if (m.length > 0) return m.length > 60 ? m.substring(0, 60) + '…' : m
+			}
+		}
+		if (code == 401) return 'API Key 无效'
+		if (code == 404) return '接口地址或模型不存在'
+		return '返回错误（' + code.toFixed(0) + '）'
+	}
+
+	function testConn() {
+		if (testing.value) return
+		uni.hideKeyboard()
+		const base = form.baseUrl.trim(), key = form.apiKey.trim(), model = form.model.trim()
+		if (base.length == 0 || model.length == 0 || key.length == 0) {
+			testOk.value = false
+			testMsg.value = '请填写接口地址、模型和 API Key'
+			return
+		}
+		testing.value = true
+		testMsg.value = ''
+		const body = {
+			model: model,
+			max_tokens: 8,
+			messages: [{ role: 'user', content: '只回复 OK' } as UTSJSONObject]
+		} as UTSJSONObject
+		const t0 = Date.now()
+		postChat(base, key, body, 'test', 30000, (res : RequestSuccess<UTSJSONObject> | null, err : string) => {
+			testing.value = false
+			if (res == null) {
+				testOk.value = false
+				testMsg.value = '网络不可用或超时'
+			} else if (res.statusCode == 200) {
+				testOk.value = true
+				testMsg.value = '连接正常 · ' + ((Date.now() - t0) / 1000).toFixed(1) + ' s'
+			} else {
+				testOk.value = false
+				testMsg.value = errText(res.data, res.statusCode)
+			}
+		})
+	}
+
+	function save() {
+		saveVlm(form)
+		uni.showToast({ title: '已保存', icon: 'success', duration: 1200 })
+		setTimeout(() => {
+			uni.navigateBack()
+		}, 600)
+	}
+</script>
+
+<style>
+
+
+
+
+
+
+	.mt4 {
+		margin-top: 4px;
+	}
+
+	.mt6 {
+		margin-top: 6px;
+	}
+
+	.mt10 {
+		margin-top: 10px;
+	}
+
+	.mt14 {
+		margin-top: 14px;
+	}
+
+	.mt16 {
+		margin-top: 16px;
+	}
+
+	.ml6 {
+		margin-left: 6px;
+	}
+
+	.ml10 {
+		margin-left: 10px;
+	}
+
+	.chip-ph {
+		flex: 1;
+		height: 44px;
+	}
+
+	.chip-c {
+		font-family: ns5;
+		font-size: 13px;
+		line-height: 19px;
+		color: #16191B;
+	}
+
+	.inp-s {
+		flex: 1;
+		height: 44px;
+		font-family: px4;
+		font-size: 15px;
+		color: #16191B;
+	}
+
+	.ph {
+		color: #757575;
+	}
+
+	.eye {
+		height: 44px;
+		padding-left: 10px;
+		justify-content: center;
+	}
+
+	.eye-t {
+		font-family: ns5;
+		font-size: 14px;
+		line-height: 20px;
+		color: #1F5FAD;
+	}
+
+	.test-t {
+		font-family: ns5;
+		font-size: 15px;
+		line-height: 21px;
+		color: #1F5FAD;
+	}
+
+	.test-r {
+		flex: 1;
+		margin-left: 6px;
+		font-family: ns4;
+		font-size: 13px;
+		line-height: 19px;
+	}
+
+	.sw-row {
+		flex-direction: row;
+		align-items: center;
+		padding: 10px 0;
+	}
+
+	.sw-sep {
+		border-top: 1px solid #E6E8E3;
+	}
+
+	.sw-t {
+		font-family: ns5;
+		font-size: 15px;
+		line-height: 21px;
+		color: #16191B;
+	}
+
+
+
+
+
+
+</style>

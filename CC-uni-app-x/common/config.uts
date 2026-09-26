@@ -40,11 +40,11 @@ export type OcrConfig = {
 // 开发自检用：为 true 时各页面载入设计稿里的示例数据（用于与设计稿逐像素对照），正式包必须为 false
 export const DEMO = false
 
-// 把 <用户名>/<仓库> 换成你的 Gitee / GitHub 仓库（raw 地址，分支名按实际填写）
+// 仓库根目录的 update.json（raw 地址）。Gitee 镜像建好后把它放到第一个，国内访问更快
 export const UPDATE_SOURCES : string[] = [
-	// 'https://gitee.com/<用户名>/<仓库>/raw/master/update.json',
-	// 'https://raw.githubusercontent.com/<用户名>/<仓库>/main/update.json',
-	// 'https://cdn.jsdelivr.net/gh/<用户名>/<仓库>@main/update.json'
+	// 'https://gitee.com/<用户名>/solution-calculator/raw/main/update.json',
+	'https://raw.githubusercontent.com/AstreoX/solution-calculator/main/update.json',
+	'https://cdn.jsdelivr.net/gh/AstreoX/solution-calculator@main/update.json'
 ]
 
 export const LLM : LlmConfig = {

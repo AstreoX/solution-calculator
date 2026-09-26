@@ -1,5 +1,5 @@
 {
   "gitee": "<用户名>/<仓库>",
-  "github": "<用户名>/<仓库>",
-  "out": "tools/release/update.json"
+  "github": "AstreoX/solution-calculator",
+  "out": "update.json"
 }

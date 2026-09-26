@@ -2,6 +2,8 @@
 
 App 每次启动时读取一个 `update.json`，用来提示新版本、下载安装包、弹出公告。这个文件和安装包都放在你自己的 Gitee（主）和 GitHub（备用）仓库里，不需要服务器。
 
+当前配置：GitHub 仓库 [AstreoX/solution-calculator](https://github.com/AstreoX/solution-calculator)，`update.json` 放在仓库根目录（`main` 分支），安装包放在该仓库的 Releases。Gitee 镜像还没配置。
+
 ## 一次性配置
 
 1. **建仓库**：在 Gitee 和 GitHub 各建一个公开仓库，比如都叫 `chemcalc`。

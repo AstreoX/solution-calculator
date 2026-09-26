@@ -1,0 +1,253 @@
+<template>
+	<view v-if="upd.sheet.length > 0" class="mask" @click="onMask">
+		<view class="dlg" @click="onDlg($event as UniPointerEvent)">
+			<!-- 新版本 -->
+			<view v-if="upd.sheet == 'update' && rel != null">
+				<text class="ns7 t20 c-ink">发现新版本</text>
+				<view class="row aic mt8">
+					<text class="ver">{{ rel!.versionName }}</text>
+					<text class="lbl ml8">{{ meta }}</text>
+				</view>
+				<view v-if="upd.force" class="row aic mt10">
+					<image class="ico16" src="/static/icons/warn-8A4B00.svg"></image>
+					<text class="ns4 t13 c-amber ml6 f1">当前版本过旧，需要更新后才能继续使用</text>
+				</view>
+				<scroll-view v-if="rel!.notes.length > 0" class="notes mt12" direction="vertical" :show-scrollbar="false">
+					<text class="note">{{ rel!.notes }}</text>
+				</scroll-view>
+
+				<view v-if="upd.dl == 'loading'" class="mt14">
+					<view class="track">
+						<view class="bar" :style="{ width: pct + '%' }"></view>
+					</view>
+					<text class="lbl mt6">{{ progressText }}</text>
+				</view>
+				<view v-if="upd.dl == 'fail'" class="mt12">
+					<text class="ns4 t13 c-amber">{{ upd.dlMsg }}</text>
+					<text class="link mt6" @click="onBrowser">改用浏览器下载</text>
+				</view>
+
+				<view class="row mt16">
+					<view v-if="!upd.force && upd.dl != 'loading'" class="btn2 f1" @click="onClose">
+						<text class="btn2-t">以后再说</text>
+					</view>
+					<view :class="['btn1', 'f1', !upd.force && upd.dl != 'loading' ? 'ml10' : '', upd.dl == 'loading' ? 'btn1-busy' : '']" @click="onDownload">
+						<image v-if="upd.dl != 'loading'" class="ico20 mr6" src="/static/icons/download-FFFFFF.svg"></image>
+						<text class="btn1-t">{{ upd.dl == 'loading' ? '下载中 ' + pct.toFixed(0) + '%' : (upd.dl == 'fail' ? '重试' : '立即更新') }}</text>
+					</view>
+				</view>
+			</view>
+
+			<!-- 公告 -->
+			<view v-if="upd.sheet == 'notice' && upd.notice != null">
+				<view class="row aic">
+					<image class="ico16" :src="warn ? '/static/icons/bell-8A4B00.svg' : '/static/icons/bell-1F5FAD.svg'"></image>
+					<text :class="['ns5', 't13', 'ml6', 'f1', warn ? 'c-amber' : 'c-blue']">{{ warn ? '重要公告' : '公告' }}</text>
+					<text class="lbl">{{ upd.notice!.date }}</text>
+				</view>
+				<text class="ns7 t20 c-ink mt8">{{ upd.notice!.title }}</text>
+				<scroll-view v-if="upd.notice!.body.length > 0" class="body mt10" direction="vertical" :show-scrollbar="false">
+					<text class="note">{{ upd.notice!.body }}</text>
+				</scroll-view>
+				<view class="btn1 mt16" @click="onClose">
+					<text class="btn1-t">知道了</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { upd, closeSheet, startDownload, openReleasePage, ApkRelease } from '@/common/update.uts'
+
+	defineOptions({ styleIsolation: 'app' })
+
+	const rel = computed(() : ApkRelease | null => upd.latest)
+	const warn = computed(() : boolean => upd.notice != null && upd.notice!.level == 'warn')
+
+	function mb(n : number) : string {
+		return (n / 1048576).toFixed(1)
+	}
+
+	const meta = computed(() : string => {
+		const r = upd.latest
+		if (r == null) return ''
+		const parts : string[] = []
+		if (r.size > 0) parts.push(mb(r.size) + ' MB')
+		if (r.date.length > 0) parts.push(r.date)
+		parts.push('当前 ' + (upd.curName.length > 0 ? upd.curName : '—'))
+		return parts.join(' · ')
+	})
+
+	const pct = computed(() : number => {
+		if (upd.dlTotal <= 0) return 0
+		return Math.min(100, Math.floor(upd.dlBytes / upd.dlTotal * 100))
+	})
+
+	const progressText = computed(() : string => {
+		if (upd.dlTotal <= 0) return '正在下载…'
+		return '正在下载 ' + mb(upd.dlBytes) + ' / ' + mb(upd.dlTotal) + ' MB'
+	})
+
+	function onMask() {
+		closeSheet()
+	}
+
+	function onClose() {
+		closeSheet()
+	}
+
+	function onDownload() {
+		startDownload()
+	}
+
+	function onBrowser() {
+		openReleasePage()
+	}
+
+	function onDlg(e : UniPointerEvent) {
+		e.stopPropagation()
+	}
+</script>
+
+<style>
+	.mask {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(22, 25, 27, 0.48);
+		justify-content: center;
+		padding: 0 20px;
+		/* 盖在三个面板（含结果卡、底栏）之上 */
+		z-index: 100;
+	}
+
+	.dlg {
+		background-color: #FFFFFF;
+		border-radius: 20px;
+		padding: 20px 20px 18px 20px;
+	}
+
+	.ver {
+		font-family: px6;
+		font-size: 22px;
+		line-height: 29px;
+		color: #1F5FAD;
+	}
+
+	.mt6 {
+		margin-top: 6px;
+	}
+
+	.mt8 {
+		margin-top: 8px;
+	}
+
+	.mt10 {
+		margin-top: 10px;
+	}
+
+	.mt12 {
+		margin-top: 12px;
+	}
+
+	.mt14 {
+		margin-top: 14px;
+	}
+
+	.mt16 {
+		margin-top: 16px;
+	}
+
+	.ml6 {
+		margin-left: 6px;
+	}
+
+	.ml8 {
+		margin-left: 8px;
+	}
+
+	.ml10 {
+		margin-left: 10px;
+	}
+
+	.mr6 {
+		margin-right: 6px;
+	}
+
+	.notes {
+		max-height: 220px;
+		padding: 12px 14px;
+		border-radius: 12px;
+		background-color: #F3F4F1;
+	}
+
+	.body {
+		max-height: 340px;
+	}
+
+	.note {
+		font-family: ns4;
+		font-size: 14px;
+		line-height: 22px;
+		color: #4F555A;
+	}
+
+	.track {
+		height: 6px;
+		border-radius: 3px;
+		background-color: #E6E8E3;
+		overflow: hidden;
+	}
+
+	.bar {
+		height: 6px;
+		border-radius: 3px;
+		background-color: #1F5FAD;
+	}
+
+	.link {
+		font-family: ns5;
+		font-size: 14px;
+		line-height: 20px;
+		color: #1F5FAD;
+	}
+
+	.btn1 {
+		height: 48px;
+		border-radius: 14px;
+		background-color: #1F5FAD;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.btn1-busy {
+		background-color: #5E8BC6;
+	}
+
+	.btn1-t {
+		font-family: ns7;
+		font-size: 16px;
+		line-height: 23px;
+		color: #FFFFFF;
+	}
+
+	.btn2 {
+		height: 48px;
+		border-radius: 14px;
+		border: 1px solid #C9CDC5;
+		background-color: #FFFFFF;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.btn2-t {
+		font-family: ns5;
+		font-size: 16px;
+		line-height: 23px;
+		color: #16191B;
+	}
+</style>

@@ -1,0 +1,378 @@
+// 版本更新与公告：启动时从 Gitee（主）/ GitHub（备）仓库读取 update.json，地址见 config.uts 的 UPDATE_SOURCES
+// update.json 格式见 tools/release/update.example.json；安装包放在仓库的发行版（Release）附件里
+
+import { UPDATE_SOURCES, DEMO } from './config.uts'
+import { openUrl } from './native.uts'
+
+export type ApkRelease = {
+	versionName : string
+	versionCode : number
+	minVersionCode : number // 低于这个版本号的必须更新（弹窗不能关闭）
+	date : string
+	size : number // 字节，校验下载是否完整
+	sha1 : string // 可选，校验内容
+	notes : string
+	urls : string[] // 依次尝试：Gitee 发行版附件 → GitHub Release
+	page : string // 发行版页面，全部下载失败时用浏览器打开
+}
+
+export type Notice = {
+	id : string
+	title : string
+	body : string
+	date : string
+	level : string // 'info' | 'warn'
+	popup : boolean // 启动时弹出，每条只弹一次
+}
+
+export type UpdateState = {
+	curName : string
+	curCode : number
+	latest : ApkRelease | null
+	hasUpdate : boolean
+	force : boolean
+	notices : Notice[]
+	unread : number
+	sheet : string // '' | 'update' | 'notice'
+	notice : Notice | null
+	checking : boolean
+	dl : string // '' | 'loading' | 'fail'
+	dlBytes : number
+	dlTotal : number
+	dlMsg : string
+}
+
+const FEED_KEY = 'update-feed'
+const READ_KEY = 'notice-read'
+const LATER_KEY = 'update-later'
+
+export const upd = reactive<UpdateState>({
+	curName: '', curCode: 0, latest: null, hasUpdate: false, force: false, notices: [], unread: 0,
+	sheet: '', notice: null, checking: false, dl: '', dlBytes: 0, dlTotal: 0, dlMsg: ''
+} as UpdateState)
+
+export function updateEnabled() : boolean {
+	return UPDATE_SOURCES.length > 0
+}
+
+function readVersion() {
+	const info = uni.getAppBaseInfo()
+	upd.curName = info.appVersion ?? ''
+	const c = parseInt(info.appVersionCode ?? '0')
+	upd.curCode = isNaN(c) ? 0 : c
+}
+
+function today() : string {
+	const d = new Date()
+	const p = (n : number) : string => (n < 10 ? '0' : '') + n.toFixed(0)
+	return d.getFullYear().toFixed(0) + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+}
+
+function readIds(key : string) : string[] {
+	const out : string[] = []
+	try {
+		const s = uni.getStorageSync(key)
+		if (s != null && typeof s == 'string' && (s as string).length > 0) {
+			const arr = JSON.parseArray<any>(s as string)
+			if (arr != null) for (let i = 0; i < arr.length; i++) if (typeof arr[i] == 'string') out.push(arr[i] as string)
+		}
+	} catch (e) { }
+	return out
+}
+
+function strList(a : any[] | null) : string[] {
+	const out : string[] = []
+	if (a != null) for (let i = 0; i < a.length; i++) if (typeof a[i] == 'string' && (a[i] as string).length > 0) out.push(a[i] as string)
+	return out
+}
+
+function parseRelease(o : UTSJSONObject | null) : ApkRelease | null {
+	if (o == null) return null
+	const r = {
+		versionName: o.getString('versionName', ''),
+		versionCode: o.getNumber('versionCode', 0),
+		minVersionCode: o.getNumber('minVersionCode', 0),
+		date: o.getString('date', ''),
+		size: o.getNumber('size', 0),
+		sha1: o.getString('sha1', ''),
+		notes: o.getString('notes', ''),
+		urls: strList(o.getArray<any>('urls')),
+		page: o.getString('page', '')
+	} as ApkRelease
+	return r.versionCode > 0 ? r : null
+}
+
+// 按版本范围与有效期过滤：minVersionCode / maxVersionCode（0 表示不限）、expires（YYYY-MM-DD，含当天）
+function parseNotices(a : any[] | null) : Notice[] {
+	const out : Notice[] = []
+	if (a == null) return out
+	const cur = upd.curCode, d = today()
+	for (let i = 0; i < a.length; i++) {
+		if (!(a[i] instanceof UTSJSONObject)) continue
+		const o = a[i] as UTSJSONObject
+		const id = o.getString('id', ''), title = o.getString('title', '')
+		if (id.length == 0 || title.length == 0) continue
+		const minV = o.getNumber('minVersionCode', 0), maxV = o.getNumber('maxVersionCode', 0)
+		if (cur > 0 && (cur < minV || (maxV > 0 && cur > maxV))) continue
+		const exp = o.getString('expires', '')
+		if (exp.length > 0 && d > exp) continue
+		out.push({ id: id, title: title, body: o.getString('body', ''), date: o.getString('date', ''), level: o.getString('level', 'info'), popup: o.getBoolean('popup', false) } as Notice)
+	}
+	return out
+}
+
+function refreshUnread() {
+	const read = readIds(READ_KEY)
+	let n = 0
+	for (let i = 0; i < upd.notices.length; i++) if (read.indexOf(upd.notices[i].id) < 0) n++
+	upd.unread = n
+}
+
+function applyFeed(o : UTSJSONObject) {
+	const rel = parseRelease(o.getJSON('latest'))
+	upd.latest = rel
+	upd.hasUpdate = rel != null && rel.versionCode > upd.curCode && rel.urls.length + rel.page.length > 0
+	upd.force = upd.hasUpdate && rel != null && rel.minVersionCode > upd.curCode
+	upd.notices = parseNotices(o.getArray<any>('notices'))
+	refreshUnread()
+}
+
+function parseFeed(d : any | null) : UTSJSONObject | null {
+	try {
+		let o : UTSJSONObject | null = null
+		if (d instanceof UTSJSONObject) o = d as UTSJSONObject
+		else if (typeof d == 'string') o = JSON.parseObject(d as string)
+		if (o != null && (o.getJSON('latest') != null || o.getArray<any>('notices') != null)) return o
+	} catch (e) { }
+	return null
+}
+
+// 依次尝试各地址，第一个拿到合法内容的为准
+function fetchFrom(i : number, cb : (o : UTSJSONObject | null) => void) {
+	if (i >= UPDATE_SOURCES.length) {
+		cb(null)
+		return
+	}
+	const u = UPDATE_SOURCES[i]
+	uni.request<any>({
+		url: u + (u.indexOf('?') >= 0 ? '&' : '?') + 't=' + Math.floor(Date.now() / 60000).toFixed(0),
+		method: 'GET',
+		timeout: 6000,
+		success: (res : RequestSuccess<any>) => {
+			const o = res.statusCode == 200 ? parseFeed(res.data) : null
+			if (o != null) cb(o)
+			else fetchFrom(i + 1, cb)
+		},
+		fail: (e : RequestFail) => {
+			fetchFrom(i + 1, cb)
+		}
+	})
+}
+
+function loadCache() {
+	try {
+		const s = uni.getStorageSync(FEED_KEY)
+		if (s != null && typeof s == 'string' && (s as string).length > 0) {
+			const o = JSON.parseObject(s as string)
+			if (o != null) applyFeed(o)
+		}
+	} catch (e) { }
+}
+
+function laterToday(vc : number) : boolean {
+	const s = uni.getStorageSync(LATER_KEY)
+	return typeof s == 'string' && (s as string) == vc.toFixed(0) + '@' + today()
+}
+
+function nextPopupNotice() : Notice | null {
+	const read = readIds(READ_KEY)
+	for (let i = 0; i < upd.notices.length; i++) {
+		const n = upd.notices[i]
+		if (n.popup && read.indexOf(n.id) < 0) return n
+	}
+	return null
+}
+
+function showNextPopup() {
+	const n = nextPopupNotice()
+	if (n != null) {
+		upd.notice = n
+		upd.sheet = 'notice'
+	} else {
+		upd.sheet = ''
+		upd.notice = null
+	}
+}
+
+// App 启动时调用：先用缓存（离线也能看公告），再联网刷新；有新版本先弹更新，否则弹未读的弹出公告
+export function checkOnLaunch() {
+	readVersion()
+	if (!updateEnabled() || DEMO) return
+	loadCache()
+	fetchFrom(0, (o : UTSJSONObject | null) => {
+		if (o == null) return
+		uni.setStorageSync(FEED_KEY, JSON.stringify(o))
+		applyFeed(o)
+		const rel = upd.latest
+		if (upd.hasUpdate && rel != null && (upd.force || !laterToday(rel.versionCode))) upd.sheet = 'update'
+		else showNextPopup()
+	})
+}
+
+// 设置页「检查更新」
+export function checkNow() {
+	if (upd.checking) return
+	readVersion()
+	if (!updateEnabled()) {
+		uni.showToast({ title: '未配置更新地址', icon: 'none' })
+		return
+	}
+	upd.checking = true
+	fetchFrom(0, (o : UTSJSONObject | null) => {
+		upd.checking = false
+		if (o == null) {
+			uni.showToast({ title: '网络不可用，稍后再试', icon: 'none' })
+			return
+		}
+		uni.setStorageSync(FEED_KEY, JSON.stringify(o))
+		applyFeed(o)
+		if (upd.hasUpdate) upd.sheet = 'update'
+		else uni.showToast({ title: '已是最新版本', icon: 'none' })
+	})
+}
+
+export function openUpdate() {
+	if (upd.hasUpdate) upd.sheet = 'update'
+}
+
+export function markRead(ids : string[]) {
+	const read = readIds(READ_KEY)
+	for (let i = 0; i < ids.length; i++) if (read.indexOf(ids[i]) < 0) read.push(ids[i])
+	// 只保留最近 200 条，避免无限增长
+	const keep = read.length > 200 ? read.slice(read.length - 200) : read
+	uni.setStorageSync(READ_KEY, JSON.stringify(keep))
+	refreshUnread()
+}
+
+export function unreadIds() : string[] {
+	const read = readIds(READ_KEY)
+	const out : string[] = []
+	for (let i = 0; i < upd.notices.length; i++) if (read.indexOf(upd.notices[i].id) < 0) out.push(upd.notices[i].id)
+	return out
+}
+
+export function markAllRead() {
+	const ids : string[] = []
+	for (let i = 0; i < upd.notices.length; i++) ids.push(upd.notices[i].id)
+	markRead(ids)
+}
+
+// 关闭弹窗：公告记为已读并接着弹下一条；更新选「以后再说」则当天不再弹
+export function closeSheet() {
+	if (upd.sheet == 'notice') {
+		const n = upd.notice
+		if (n != null) markRead([n.id])
+		showNextPopup()
+		return
+	}
+	if (upd.sheet == 'update') {
+		if (upd.force || upd.dl == 'loading') return
+		const rel = upd.latest
+		if (rel != null) uni.setStorageSync(LATER_KEY, rel.versionCode.toFixed(0) + '@' + today())
+		upd.dl = ''
+		showNextPopup()
+	}
+}
+
+// —— 下载与安装 ——
+
+function apkPath(rel : ApkRelease) : string {
+	return uni.env.USER_DATA_PATH + '/chemcalc-' + rel.versionCode.toFixed(0) + '.apk'
+}
+
+// 校验大小（和 sha1，如有）：Gitee 未登录时可能返回登录页等非安装包内容，这里能识别出来并换下一个地址
+function verifyApk(p : string, rel : ApkRelease, cb : (ok : boolean) => void) {
+	uni.getFileSystemManager().getFileInfo({
+		filePath: p,
+		digestAlgorithm: 'sha1',
+		success: (r : GetFileInfoSuccessResult) => {
+			if (rel.size > 0 ? r.size != rel.size : r.size < 1000000) {
+				cb(false)
+				return
+			}
+			cb(rel.sha1.length == 0 || r.digest.toLowerCase() == rel.sha1.toLowerCase())
+		},
+		fail: (e : IFileSystemManagerFail) => {
+			cb(false)
+		}
+	} as GetFileInfoOptions)
+}
+
+function install(p : string) {
+	upd.dl = ''
+	uni.installApk({
+		filePath: p,
+		fail: (e : InstallApkFail) => {
+			upd.dl = 'fail'
+			upd.dlMsg = '无法打开安装程序，可改用浏览器下载'
+		}
+	} as InstallApkOptions)
+}
+
+function tryUrl(rel : ApkRelease, i : number) {
+	if (i >= rel.urls.length) {
+		upd.dl = 'fail'
+		upd.dlMsg = '下载失败，可改用浏览器下载'
+		return
+	}
+	upd.dlBytes = 0
+	const task = uni.downloadFile({
+		url: rel.urls[i],
+		filePath: apkPath(rel),
+		timeout: 600000,
+		success: (res : DownloadFileSuccess) => {
+			if (res.statusCode != 200) {
+				tryUrl(rel, i + 1)
+				return
+			}
+			const p = res.tempFilePath
+			verifyApk(p, rel, (ok : boolean) => {
+				if (ok) install(p)
+				else tryUrl(rel, i + 1)
+			})
+		},
+		fail: (e : DownloadFileFail) => {
+			tryUrl(rel, i + 1)
+		}
+	} as DownloadFileOptions)
+	task.onProgressUpdate((r : OnProgressDownloadResult) => {
+		upd.dlBytes = r.totalBytesWritten
+		if (r.totalBytesExpectedToWrite > 0) upd.dlTotal = r.totalBytesExpectedToWrite
+	})
+}
+
+export function startDownload() {
+	const rel = upd.latest
+	if (rel == null || upd.dl == 'loading') return
+	if (rel.urls.length == 0) {
+		openReleasePage()
+		return
+	}
+	upd.dl = 'loading'
+	upd.dlMsg = ''
+	upd.dlBytes = 0
+	upd.dlTotal = rel.size
+	// 之前已下载完整（例如装到一半取消了）就直接安装
+	const p = apkPath(rel)
+	verifyApk(p, rel, (ok : boolean) => {
+		if (ok) install(p)
+		else tryUrl(rel, 0)
+	})
+}
+
+export function openReleasePage() {
+	const rel = upd.latest
+	if (rel == null) return
+	const u = rel.page.length > 0 ? rel.page : (rel.urls.length > 0 ? rel.urls[0] : '')
+	if (u.length > 0) openUrl(u)
+}

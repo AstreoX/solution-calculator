@@ -1,0 +1,66 @@
+<template>
+	<view class="nav" :style="{ height: (58 + bottom) + 'px', paddingBottom: bottom + 'px' }">
+		<view class="it" @click="go('prep')">
+			<image class="ic" :src="active == 'prep' ? '/static/icons/flask-1F5FAD.svg' : '/static/icons/flask-4F555A.svg'"></image>
+			<text :class="['tx', active == 'prep' ? 'on' : 'off']">配制</text>
+		</view>
+		<view class="it" @click="go('dilu')">
+			<image class="ic" :src="active == 'dilu' ? '/static/icons/drop-1F5FAD.svg' : '/static/icons/drop-4F555A.svg'"></image>
+			<text :class="['tx', active == 'dilu' ? 'on' : 'off']">稀释</text>
+		</view>
+		<view class="it" @click="go('multi')">
+			<image class="ic" :src="active == 'multi' ? '/static/icons/layers-1F5FAD.svg' : '/static/icons/layers-4F555A.svg'"></image>
+			<text :class="['tx', active == 'multi' ? 'on' : 'off']">多组分</text>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	const props = defineProps({
+		active: { type: String, default: 'prep' },
+		bottom: { type: Number, default: 26 }
+	})
+	const emit = defineEmits(['go'])
+
+	function go(t : string) {
+		if (t != props.active) emit('go', t)
+	}
+</script>
+
+<style>
+	.nav {
+		flex-direction: row;
+		padding-top: 6px;
+		padding-left: 8px;
+		padding-right: 8px;
+		background-color: #FFFFFF;
+		border-top: 1px solid #DCDFD8;
+	}
+
+	.it {
+		flex: 1;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.ic {
+		width: 24px;
+		height: 24px;
+	}
+
+	.tx {
+		margin-top: 3px;
+		font-size: 12px;
+		line-height: 17px;
+	}
+
+	.on {
+		font-family: ns7;
+		color: #1F5FAD;
+	}
+
+	.off {
+		font-family: ns5;
+		color: #4F555A;
+	}
+</style>

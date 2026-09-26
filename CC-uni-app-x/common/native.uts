@@ -1,0 +1,39 @@
+// 原生输入框调整：化学式、名称等文本输入关闭拼写检查与联想（否则 CuSO4·5H2O 会被标红波浪线、被自动改写）
+// #ifdef APP-ANDROID
+import EditText from 'android.widget.EditText'
+import Intent from 'android.content.Intent'
+import Uri from 'android.net.Uri'
+// #endif
+
+// android.text.InputType：TYPE_CLASS_TEXT = 1，TYPE_TEXT_FLAG_NO_SUGGESTIONS = 0x80000
+function applyNoSuggest(el : UniElement) {
+	// #ifdef APP-ANDROID
+	const v = el.getAndroidView<EditText>()
+	if (v == null) return
+	const t = v.getInputType()
+	if ((t & 15) == 1 && (t & 0x80000) == 0) {
+		v.setInputType(t | 0x80000)
+	}
+	// #endif
+}
+
+export function noSuggestTree(root : UniElement | null) {
+	if (root == null) return
+	if (root.tagName == 'INPUT') applyNoSuggest(root)
+	const ch = root.children
+	for (let i = 0; i < ch.length; i++) noSuggestTree(ch[i])
+}
+
+// 用系统浏览器打开链接（更新包下载失败时的兜底）
+export function openUrl(url : string) {
+	// #ifdef APP-ANDROID
+	try {
+		const it = new Intent(Intent.ACTION_VIEW, Uri.parse(url))
+		it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+		UTSAndroid.getUniActivity()!.startActivity(it)
+	} catch (e) {
+		uni.setClipboardData({ data: url })
+		uni.showToast({ title: '链接已复制，请在浏览器中打开', icon: 'none' })
+	}
+	// #endif
+}

@@ -1,0 +1,368 @@
+// 从 OCR 文字中提取试剂标签字段
+import { molarMass, normF, hillKey } from './chem.uts'
+import { sig, num } from './fmt.uts'
+import { OcrLine } from './ocr.uts'
+import { matchReagentInText, Compound, densityAt } from './db.uts'
+
+export type LabelInfo = {
+	name : string
+	nameLine : number
+	formula : string
+	formulaLine : number
+	labelM : number // 标签上的分子量，0 = 未识别
+	mLine : number
+	purity : string
+	purityLine : number
+	w : string
+	wRange : string // 如「36.0%～38.0%」，非空表示取了中值
+	wLine : number
+	rho : string
+	rhoLine : number
+	grade : string
+	conc : string
+	unit : string
+	concLine : number
+}
+
+const BOILER = ['化学试剂', '分析纯', '优级纯', '化学纯', '净含量', '批号', '生产日期', '有效期', '有限公司', '公司', '地址', '电话', '规格', '含量', '危险', '警示', '注意', '储存', '贮存', '执行标准', '产品标准', '标准号', '保质期', '实验室', '配制', '标定', '溶剂', '密度', '分子量', '分子式', '质量分数', '使用', '仅供', '厂', '网址', '邮编', '失效']
+
+function toHalf(s : string) : string {
+	let out = ''
+	for (let i = 0; i < s.length; i++) {
+		let c = s.charCodeAt(i)!
+		if (c >= 0xff01 && c <= 0xff5e && c != 0xff5e) c = c - 0xfee0
+		if (c == 0x3000) c = 32
+		out += String.fromCharCode(c)
+	}
+	return out
+}
+
+function cjkCount(s : string) : number {
+	let n = 0
+	for (let i = 0; i < s.length; i++) {
+		const c = s.charCodeAt(i)!
+		if (c >= 0x3400 && c <= 0x9fff) n++
+	}
+	return n
+}
+
+function isBoiler(s : string) : boolean {
+	for (let i = 0; i < BOILER.length; i++) {
+		if (s.indexOf(BOILER[i]) >= 0) return true
+	}
+	return false
+}
+
+// 去掉名称行里附带的等级、英文等
+function cleanName(s : string) : string {
+	let t = s.replace(/(AR|GR|CP|LR|BR)\s*$/, '').replace(/(分析纯|优级纯|化学纯|生化试剂)\s*$/, '')
+	t = t.replace(/[A-Za-z][A-Za-z\s\-(),.]{6,}$/, '')
+	return t.trim()
+}
+
+const FORMULA_RE = /[A-Z\(\[][A-Za-z0-9\(\)\[\]₀₁₂₃₄₅₆₇₈₉·•∙⋅\.\*]*/g
+const M_RE = /(?:分子量|相对分子质量|摩尔质量|式量|(?:^|[^A-Za-z])(?:Mr|MW|M\.W\.|M))\s*[=:：]?\s*(\d+(?:\.\d+)?)/
+const PUR_RE = /(?:含量|纯度|含\s*量|[Aa]ssay|[Pp]urity)[^0-9]{0,6}(\d+(?:\.\d+)?)\s*%?\s*(?:[~～\-—–至]\s*(\d+(?:\.\d+)?)\s*%?)?/
+const GE_RE = /[≥>]\s*(\d+(?:\.\d+)?)\s*%/
+const RHO_RE = /(?:密度|相对密度|比重|ρ|[Dd]ensity)[^0-9]{0,6}(\d+(?:\.\d+)?)(?:\s*[~～\-—–至]\s*(\d+(?:\.\d+)?))?/
+const C_RE = /[cC]\s*[\(（]\s*([^)）]+?)\s*[\)）]\s*[=:：]\s*(\d+(?:\.\d+)?)\s*(mol\/L|mmol\/L|µmol\/L|μmol\/L|g\/L|mM|M)?/
+const CONC_RE = /(\d+(?:\.\d+)?)\s*(mol\/L|mmol\/L|µmol\/L|μmol\/L|g\/L|mg\/mL|mM|M)(?![A-Za-z])/
+const TIMES_RE = /(\d+(?:\.\d+)?)\s*[×xX](?![A-Za-z0-9])/
+
+function unitId(u : string) : string {
+	if (u == 'mol/L' || u == 'M') return 'M'
+	if (u == 'mmol/L' || u == 'mM') return 'mM'
+	if (u == 'µmol/L' || u == 'μmol/L') return 'uM'
+	if (u == 'g/L' || u == 'mg/mL') return 'gL'
+	return 'M'
+}
+
+function gradeOf(text : string) : string {
+	const abbr = ['GR', 'AR', 'CP', 'LR', 'BR']
+	const zh = ['优级纯', '分析纯', '化学纯', '实验试剂', '生化试剂']
+	for (let i = 0; i < abbr.length; i++) {
+		const hasA = new RegExp('(^|[^A-Za-z])' + abbr[i] + '([^A-Za-z]|$)').test(text)
+		const hasZ = text.indexOf(zh[i]) >= 0
+		if (hasA && hasZ) return abbr[i] + ' ' + zh[i]
+		if (hasA) return abbr[i] + ' ' + zh[i]
+		if (hasZ) return zh[i]
+	}
+	const other = ['色谱纯', '光谱纯', '基准试剂', '电子纯', '高纯', 'HPLC']
+	for (let i = 0; i < other.length; i++) {
+		if (text.indexOf(other[i]) >= 0) return other[i]
+	}
+	return ''
+}
+
+function squash(s : string) : string {
+	return normF(toHalf(s)).toLowerCase()
+}
+
+// 找出包含某段文字的行（忽略空白、全半角、下标），用于给视觉模型的字段定位画框
+function findLine(txt : string[], needle : string) : number {
+	const n = squash(needle)
+	if (n.length == 0) return -1
+	for (let i = 0; i < txt.length; i++) {
+		if (squash(txt[i]).indexOf(n) >= 0) return i
+	}
+	return -1
+}
+
+function fieldStr(f : UTSJSONObject, k : string) : string {
+	const v = f.get(k)
+	if (v == null) return ''
+	if (typeof v == 'string') return (v as string).trim()
+	if (typeof v == 'number') return (v as number).toString()
+	return ''
+}
+
+function applyFields(info : LabelInfo, f : UTSJSONObject, txt : string[], kind : string) {
+	const name = fieldStr(f, 'name')
+	if (name.length > 0) {
+		info.name = name
+		const li = findLine(txt, name)
+		if (li >= 0) info.nameLine = li
+	}
+	const formula = fieldStr(f, 'formula')
+	if (formula.length > 0 && molarMass(formula) != null) {
+		const keep = info.formula.length > 0 && hillKey(info.formula) == hillKey(formula)
+		if (!keep) info.formula = normF(formula)
+		if (info.formulaLine < 0) info.formulaLine = findLine(txt, formula)
+	}
+	const M = num(fieldStr(f, 'M'))
+	if (M != null && M > 1 && M < 5000) {
+		info.labelM = M
+		if (info.mLine < 0) info.mLine = findLine(txt, fieldStr(f, 'M'))
+	}
+	if (kind == 'liquid') {
+		const lo = num(fieldStr(f, 'wLow')), hi = num(fieldStr(f, 'wHigh'))
+		if (lo != null && lo > 0 && lo <= 100) {
+			if (hi != null && hi > lo && hi <= 100) {
+				info.w = sig((lo + hi) / 2, 4)
+				info.wRange = fieldStr(f, 'wLow') + '%～' + fieldStr(f, 'wHigh') + '%'
+			} else {
+				info.w = fieldStr(f, 'wLow')
+				info.wRange = ''
+			}
+			if (info.wLine < 0) info.wLine = findLine(txt, fieldStr(f, 'wLow'))
+		}
+		const rho = num(fieldStr(f, 'rho'))
+		if (rho != null && rho >= 0.5 && rho <= 3.5) {
+			info.rho = fieldStr(f, 'rho')
+			if (info.rhoLine < 0) info.rhoLine = findLine(txt, fieldStr(f, 'rho'))
+		}
+	} else {
+		const pur = num(fieldStr(f, 'purity'))
+		if (pur != null && pur > 0 && pur <= 100) {
+			info.purity = fieldStr(f, 'purity')
+			if (info.purityLine < 0) info.purityLine = findLine(txt, fieldStr(f, 'purity'))
+		}
+	}
+	const grade = fieldStr(f, 'grade')
+	if (grade.length > 0) info.grade = grade
+	if (kind == 'stock') {
+		const c = num(fieldStr(f, 'conc'))
+		if (c != null && c > 0) {
+			info.conc = fieldStr(f, 'conc')
+			const u = fieldStr(f, 'unit')
+			if (u == '×' || u == 'x' || u == 'X' || u == '倍') info.unit = 'x'
+			else if (u == '%') info.unit = 'pct'
+			else if (u.length > 0) info.unit = unitId(u)
+			if (info.concLine < 0) info.concLine = findLine(txt, fieldStr(f, 'conc'))
+		}
+	}
+}
+
+export function parseLabel(lines : OcrLine[], kind : string, fields : UTSJSONObject | null) : LabelInfo {
+	const info : LabelInfo = {
+		name: '', nameLine: -1, formula: '', formulaLine: -1, labelM: 0, mLine: -1, purity: '', purityLine: -1,
+		w: '', wRange: '', wLine: -1, rho: '', rhoLine: -1, grade: '', conc: '', unit: '', concLine: -1
+	}
+	const txt : string[] = []
+	for (let i = 0; i < lines.length; i++) txt.push(toHalf(lines[i].text))
+	const all = txt.join('\n')
+
+	// —— 名称：优先匹配常用试剂库；否则取字号最大 / 最靠前的中文行 ——
+	let reagent : Compound | null = null
+	let bestScore = -1
+	for (let i = 0; i < txt.length; i++) {
+		const hit = matchReagentInText(txt[i])
+		if (hit != null) {
+			const score = hit.zh.length
+			if (score > bestScore) {
+				bestScore = score
+				reagent = hit
+				info.nameLine = i
+			}
+		}
+	}
+	if (info.nameLine < 0) {
+		let bestH = -1
+		for (let i = 0; i < txt.length; i++) {
+			const t = txt[i]
+			if (cjkCount(t) < 2) continue
+			if (isBoiler(t) && !(kind == 'stock' && t.indexOf('溶液') >= 0)) continue
+			const h = lines[i].w > 0 ? lines[i].h : (100 - i)
+			const bonus = kind == 'stock' && (t.indexOf('溶液') >= 0 || t.indexOf('缓冲') >= 0) ? 1000 : 0
+			if (h + bonus > bestH) {
+				bestH = h + bonus
+				info.nameLine = i
+			}
+		}
+	}
+	if (info.nameLine >= 0) info.name = cleanName(txt[info.nameLine])
+
+	// —— 化学式 ——
+	let bestLen = 0
+	for (let i = 0; i < txt.length; i++) {
+		const ms = txt[i].match(FORMULA_RE)
+		if (ms == null) continue
+		for (let k = 0; k < ms.length; k++) {
+			let tok = ms[k]!
+			tok = tok.replace(/[\.\*·•]+$/, '')
+			if (tok.startsWith('(') && tok.endsWith(')')) tok = tok.substring(1, tok.length - 1)
+			if (tok.length < 2) continue
+			if (molarMass(tok) == null) continue
+			const nf = normF(tok)
+			let digits = false
+			for (let j = 0; j < nf.length; j++) {
+				const c = nf.charAt(j)
+				if (c >= '0' && c <= '9') digits = true
+			}
+			let uppers = 0
+			for (let j = 0; j < nf.length; j++) {
+				const c = nf.charAt(j)
+				if (c >= 'A' && c <= 'Z') uppers++
+			}
+			if (!digits && uppers < 2) continue
+			if (nf.length > bestLen) {
+				bestLen = nf.length
+				info.formula = nf
+				info.formulaLine = i
+			}
+		}
+	}
+	if (info.formula.length == 0 && reagent != null) info.formula = reagent.f
+	if (reagent != null && info.formula.length > 0) {
+		// 标签化学式与试剂库一致时，用试剂库的写法（如 CH3COOH 而非 C2H4O2）
+		const a = hillKey(info.formula), b = hillKey(reagent.f)
+		if (a != null && b != null && a == b) info.formula = reagent.f
+	}
+
+	// —— 分子量 ——
+	for (let i = 0; i < txt.length; i++) {
+		const m = txt[i].match(M_RE)
+		if (m != null) {
+			const v = num(m[1]!)
+			if (v != null && v > 1 && v < 5000) {
+				info.labelM = v
+				info.mLine = i
+				break
+			}
+		}
+	}
+
+	// —— 含量 / 质量分数 ——
+	for (let i = 0; i < txt.length; i++) {
+		const t = txt[i]
+		const m = t.match(PUR_RE)
+		let lo = ''
+		let hi = ''
+		if (m != null) {
+			lo = m[1]!
+			hi = m[2] == null ? '' : m[2]!
+		} else {
+			const g = t.match(GE_RE)
+			if (g != null) lo = g[1]!
+		}
+		if (lo.length == 0) continue
+		const vlo = num(lo)
+		if (vlo == null || vlo <= 0 || vlo > 100) continue
+		if (kind == 'liquid') {
+			if (hi.length > 0) {
+				const vhi = num(hi)!
+				info.w = sig((vlo + vhi) / 2, 4)
+				info.wRange = lo + '%～' + hi + '%'
+			} else {
+				info.w = lo
+			}
+			info.wLine = i
+		} else {
+			info.purity = lo
+			info.purityLine = i
+		}
+		break
+	}
+
+	// —— 密度 ——
+	for (let i = 0; i < txt.length; i++) {
+		const m = txt[i].match(RHO_RE)
+		if (m != null) {
+			const a = num(m[1]!)
+			if (a == null || a < 0.5 || a > 3.5) continue
+			if (m[2] != null) {
+				const b = num(m[2]!)
+				info.rho = b != null ? sig((a + b) / 2, 4) : m[1]!
+			} else {
+				info.rho = m[1]!
+			}
+			info.rhoLine = i
+			break
+		}
+	}
+
+	// —— 浓度（稀释的原液）——
+	if (kind == 'stock') {
+		for (let i = 0; i < txt.length; i++) {
+			const m = txt[i].match(C_RE)
+			if (m != null) {
+				const f = m[1]!
+				if (info.formula.length == 0 && molarMass(f) != null) info.formula = normF(f)
+				info.conc = m[2]!
+				info.unit = m[3] == null ? 'M' : unitId(m[3]!)
+				info.concLine = i
+				break
+			}
+		}
+		if (info.concLine < 0) {
+			for (let i = 0; i < txt.length; i++) {
+				const m = txt[i].match(CONC_RE)
+				if (m != null) {
+					info.conc = m[1]!
+					info.unit = unitId(m[2]!)
+					info.concLine = i
+					break
+				}
+				const x = txt[i].match(TIMES_RE)
+				if (x != null) {
+					info.conc = x[1]!
+					info.unit = 'x'
+					info.concLine = i
+					break
+				}
+			}
+		}
+	}
+
+	info.grade = gradeOf(all)
+
+	// —— 视觉模型直接给出的字段：校验后优先采用（规则解析作为兜底），并找回所在行用于画框 ——
+	if (fields != null) applyFields(info, fields, txt, kind)
+
+	// —— 补全：液体试剂缺密度时查表 / 用试剂库默认值 ——
+	if (kind == 'liquid') {
+		if (info.w.length == 0 && reagent != null && reagent.w > 0) {
+			info.w = sig(reagent.w, 4)
+			if (reagent.wLo > 0 && reagent.wHi > 0) info.wRange = sig(reagent.wLo, 3) + '%～' + sig(reagent.wHi, 3) + '%'
+		}
+		if (info.rho.length == 0) {
+			const wv = num(info.w)
+			const f = info.formula.length > 0 ? info.formula : (reagent != null ? reagent.f : '')
+			const d = wv != null && f.length > 0 ? densityAt(f, wv) : 0
+			if (d > 0) info.rho = sig(d, 3)
+			else if (reagent != null && reagent.rho > 0) info.rho = sig(reagent.rho, 3)
+		}
+	}
+	if (info.name.length == 0 && reagent != null) info.name = reagent.zh
+	return info
+}

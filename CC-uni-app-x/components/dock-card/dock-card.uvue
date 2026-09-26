@@ -1,0 +1,238 @@
+<template>
+	<view class="dock">
+		<view class="dock-bg"></view>
+		<view class="top">
+			<view class="left">
+				<text class="line1">{{ dock.verb + ' ' }}<text v-for="(r, i) in subjectRuns" :key="i" :class="r.cjk ? 'subj-cn' : 'subj'">{{ r.t }}</text></text>
+				<view class="vrow">
+					<text class="val">{{ dock.value }}</text>
+					<text class="unit">{{ dock.unit }}</text>
+				</view>
+			</view>
+			<view class="tags">
+				<view v-for="(t, i) in dock.tags" :key="i" :class="['tag', i > 0 ? 'tag-gap' : '']" :style="{ backgroundColor: t.bg }">
+					<text class="tag-t" :style="{ color: t.fg }">{{ t.text }}</text>
+				</view>
+			</view>
+		</view>
+		<view class="facts">
+			<view v-for="(row, ri) in factRows" :key="ri" :class="['frow', ri > 0 ? 'frow-gap' : '']">
+				<view v-for="(f, fi) in row" :key="fi" :class="['fact', fi > 0 ? 'fact-gap' : '']">
+					<text :class="['fk', f.sub ? 'fk-sub' : '']">{{ f.k }}</text>
+					<text class="fv" :style="{ color: f.c }"><text v-for="(r, ri2) in f.runs" :key="ri2" :class="r.cjk ? 'fv-cn' : 'fv-px'" :style="{ color: f.c }">{{ r.t }}</text></text>
+				</view>
+			</view>
+		</view>
+		<view v-if="dock.hasWarn" class="warn">
+			<image class="wico" src="/static/icons/warn-F2B35A.svg"></image>
+			<text class="wt">{{ dock.warn }}</text>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { Dock, Fact, Run, runs } from '@/common/types.uts'
+
+	const props = defineProps({
+		dock: { type: Object as PropType<Dock>, required: true }
+	})
+
+	const subjectRuns = computed(() : Run[] => runs(props.dock.subject))
+
+	type FactView = { k : string, c : string, runs : Run[], sub : boolean }
+
+	// 设计稿中含下标数字（如「原液 C₁」）的标签由系统回退字体绘制，行盒比正常高 2px
+	function hasSub(s : string) : boolean {
+		for (let i = 0; i < s.length; i++) {
+			const c = s.charCodeAt(i)!
+			if (c >= 0x2080 && c <= 0x2089) return true
+		}
+		return false
+	}
+
+	const factRows = computed(() : FactView[][] => {
+		const out : FactView[][] = []
+		const fs = props.dock.facts
+		for (let i = 0; i < fs.length; i += 3) {
+			const row : FactView[] = []
+			for (let k = i; k < i + 3 && k < fs.length; k++) row.push({ k: fs[k].k, c: fs[k].c, runs: runs(fs[k].v), sub: hasSub(fs[k].k) } as FactView)
+			out.push(row)
+		}
+		return out
+	})
+</script>
+
+<style>
+	/* 阴影画在不接收触摸的背景层上：原生端带 box-shadow 的视图会把触摸区域扩大到阴影范围，挡住上方输入框 */
+	.dock {
+		margin: 0 10px 10px 10px;
+		padding: 12px 16px;
+		overflow: visible;
+	}
+
+	.dock-bg {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		border-radius: 18px;
+		background-color: #16191B;
+		/* 设计稿为 0 8px 24px rgba(22,25,27,.18)；Android 的模糊半径约定不同，按像素实测调成同样的阴影分布 */
+		box-shadow: 0 10px 36px rgba(22, 25, 27, 0.24);
+		pointer-events: none;
+	}
+
+	.top {
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: flex-end;
+	}
+
+	.left {
+		flex: 1;
+		min-width: 0;
+		margin-right: 10px;
+	}
+
+	.line1 {
+		font-family: ns4;
+		font-size: 12px;
+		line-height: 17px;
+		color: #AEB4B8;
+		lines: 1;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.subj {
+		font-family: px4;
+		font-size: 12px;
+		color: #F3F4F1;
+	}
+
+	.subj-cn {
+		font-family: ns4;
+		font-size: 12px;
+		color: #F3F4F1;
+	}
+
+	.vrow {
+		margin-top: 1px;
+		flex-direction: row;
+		align-items: flex-end;
+	}
+
+	.val {
+		font-family: px5;
+		font-size: 40px;
+		line-height: 57px;
+		margin-top: -6.5px;
+		margin-bottom: -6.5px;
+		letter-spacing: -1px;
+		color: #F3F4F1;
+	}
+
+	.unit {
+		margin-left: 6px;
+		font-family: px4;
+		font-size: 16px;
+		line-height: 23px;
+		color: #AEB4B8;
+	}
+
+	.tags {
+		align-items: flex-end;
+		padding-bottom: 6px;
+	}
+
+	.tag {
+		padding: 0 7px;
+		border-radius: 5px;
+	}
+
+	.tag-gap {
+		margin-top: 4px;
+	}
+
+	.tag-t {
+		font-family: ns7;
+		font-size: 11px;
+		line-height: 18px;
+		white-space: nowrap;
+	}
+
+	.facts {
+		margin-top: 8px;
+		padding-top: 8px;
+		border-top: 1px solid #2E3439;
+	}
+
+	.frow {
+		flex-direction: row;
+	}
+
+	.frow-gap {
+		margin-top: 8px;
+	}
+
+	.fact {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.fact-gap {
+		margin-left: 10px;
+	}
+
+	.fk {
+		font-family: ns4;
+		font-size: 11px;
+		line-height: 16px;
+		color: #8C959C;
+		white-space: nowrap;
+	}
+
+	.fk-sub {
+		padding-bottom: 2px;
+	}
+
+	.fv {
+		margin-top: 1px;
+		font-family: px5;
+		font-size: 13px;
+		line-height: 19px;
+		lines: 1;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	.fv-px {
+		font-family: px5;
+		font-size: 13px;
+	}
+
+	.fv-cn {
+		font-family: ns5;
+		font-size: 13px;
+	}
+
+	.warn {
+		margin-top: 8px;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.wico {
+		width: 15px;
+		height: 15px;
+	}
+
+	.wt {
+		margin-left: 6px;
+		font-family: ns4;
+		font-size: 12px;
+		line-height: 18px;
+		color: #F2B35A;
+	}
+</style>

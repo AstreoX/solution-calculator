@@ -1,0 +1,24 @@
+# 构建产物
+CC-uni-app-x/unpackage/
+CC-uni-app-x/.hbuilderx/
+
+# 签名证书与密码：切勿提交
+keystore/
+
+# Python 虚拟环境与缓存
+.venv/
+__pycache__/
+*.pyc
+
+# 工具的中间文件（可由脚本重新生成）
+tools/db/_raw/
+tools/db/_out/
+tools/fonts/_work/
+tools/release/dist/
+
+# 设计稿解压目录（由根目录的 zip 生成）
+_design/
+
+# 本地编辑器 / 助手配置
+.claude/
+.DS_Store

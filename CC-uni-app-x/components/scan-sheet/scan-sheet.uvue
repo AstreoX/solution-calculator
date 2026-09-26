@@ -1,0 +1,935 @@
+<template>
+	<view ref="rootRef" class="root">
+		<!-- 顶栏 -->
+		<view class="top" :style="{ height: (topPad + 54) + 'px', paddingTop: topPad + 'px' }">
+			<view class="close" @click="close">
+				<image class="ico20" src="/static/icons/close-F3F4F1.svg"></image>
+			</view>
+			<view class="title-w">
+				<text class="title">扫描试剂标签</text>
+			</view>
+			<view class="side"></view>
+		</view>
+
+		<!-- 取景 / 照片 -->
+		<view ref="photoRef" :class="['photo', phase == 'result' ? 'photo-r' : 'photo-c']">
+			<camera v-if="phase == 'camera' && camOk && camReady" class="cam" device-position="back" flash="off" resolution="high" @error="onCamErr"></camera>
+			<image v-if="phase != 'camera' && photo.length > 0" class="shot" :src="photo" mode="aspectFill"></image>
+			<view v-for="(b, i) in boxes" :key="i" class="box" :style="{ left: b.x + 'px', top: b.y + 'px', width: b.w + 'px', height: b.h + 'px' }"></view>
+			<view v-for="(b, i) in boxes" :key="'t' + i" class="btag" :style="{ left: b.tx + 'px', top: b.ty + 'px' }">
+				<text class="btag-t">{{ b.label }}</text>
+			</view>
+			<view v-if="phase != 'result'" class="corner c-tl"></view>
+			<view v-if="phase != 'result'" class="corner c-tr"></view>
+			<view v-if="phase != 'result'" class="corner c-bl"></view>
+			<view v-if="phase != 'result'" class="corner c-br"></view>
+			<text v-if="phase != 'result'" class="hint">{{ hint }}</text>
+			<view v-if="phase == 'scan'" ref="lineRef" class="scanline"></view>
+		</view>
+
+		<!-- 拍摄按钮 -->
+		<view v-if="phase != 'result'" class="ctrl" :style="{ paddingBottom: ctrlBottom + 'px', height: (96 + ctrlBottom) + 'px' }">
+			<view class="ctrl-side">
+				<view class="gal" @click="pickAlbum">
+					<image class="ico24" src="/static/icons/gallery-F3F4F1.svg"></image>
+				</view>
+			</view>
+			<view class="ctrl-mid">
+				<view class="shutter" @click="shoot">
+					<view class="shutter-in"></view>
+				</view>
+			</view>
+			<view class="ctrl-side ctrl-end">
+				<view class="manual" @click="close">
+					<text class="manual-t">手动输入</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 识别结果 -->
+		<view v-if="phase == 'result'" class="sheet">
+			<scroll-view class="sheet-s" direction="vertical" :show-scrollbar="false">
+				<view class="sheet-in">
+					<text class="rh2">识别结果</text>
+
+					<view class="mt12">
+						<text class="lbl">名称</text>
+						<view :class="['fld', 'mt6', focus == 'name' ? 'fld-on' : '']">
+							<input class="inp-sans" :value="v.name" @input="setF('name', ($event as UniInputEvent).detail.value)" @focus="focus = 'name'" @blur="blurField('name')" />
+						</view>
+					</view>
+
+					<view class="mt12">
+						<text class="lbl">化学式</text>
+						<view :class="['fld', 'mt6', focus == 'formula' ? 'fld-on' : '']">
+							<input class="inp" :value="v.formula" @input="setF('formula', ($event as UniInputEvent).detail.value)" @focus="focus = 'formula'" @blur="blurField('formula')" />
+						</view>
+						<text v-if="mMismatch" class="warn13 mt6">{{ mMsg }}</text>
+					</view>
+
+					<view v-if="kind == 'solid' || kind == 'component'" class="row mt12">
+						<view class="f1 col0">
+							<text class="lbl">含量</text>
+							<view :class="['fld', 'fld12', 'mt6', focus == 'purity' ? 'fld-on' : '']">
+								<input :focus="focus == 'purity'" class="inp" type="digit" :value="v.purity" @input="setF('purity', ($event as UniInputEvent).detail.value)" @focus="focus = 'purity'" @blur="blurField('purity')" />
+								<text class="u15">%</text>
+								<view v-if="focus != 'purity'" class="lp-cover" @touchstart="lpStart('purity', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('purity')"></view>
+							</view>
+						</view>
+						<view class="f1 col0 ml10">
+							<text class="lbl">规格</text>
+							<view :class="['fld', 'fld12', 'mt6', focus == 'grade' ? 'fld-on' : '']">
+								<input class="inp-sans" :value="v.grade" @input="setF('grade', ($event as UniInputEvent).detail.value)" @focus="focus = 'grade'" @blur="blurField('grade')" />
+							</view>
+						</view>
+					</view>
+
+					<view v-if="kind == 'liquid'" class="mt12">
+						<view class="row">
+							<view class="f1 col0">
+								<text class="lbl">质量分数 w</text>
+								<view :class="['fld', 'fld12', 'mt6', wRange.length > 0 ? 'fld-amber' : '', focus == 'w' ? 'fld-on' : '']">
+									<input :focus="focus == 'w'" class="inp" type="digit" :value="v.w" @input="setF('w', ($event as UniInputEvent).detail.value)" @focus="focus = 'w'" @blur="blurField('w')" />
+									<text class="u15">%</text>
+									<view v-if="focus != 'w'" class="lp-cover" @touchstart="lpStart('w', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('w')"></view>
+								</view>
+							</view>
+							<view class="f1 col0 ml10">
+								<text class="lbl">密度 ρ</text>
+								<view :class="['fld', 'fld12', 'mt6', focus == 'rho' ? 'fld-on' : '']">
+									<input :focus="focus == 'rho'" class="inp" type="digit" :value="v.rho" @input="setF('rho', ($event as UniInputEvent).detail.value)" @focus="focus = 'rho'" @blur="blurField('rho')" />
+									<text class="u14">g/mL</text>
+									<view v-if="focus != 'rho'" class="lp-cover" @touchstart="lpStart('rho', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('rho')"></view>
+								</view>
+							</view>
+						</view>
+						<text v-if="wRange.length > 0" class="warn13 mt12">{{ '标签 ' + wRange + '，取中值' }}</text>
+					</view>
+
+					<view v-if="kind == 'stock'" class="mt12">
+						<text class="lbl">原液浓度</text>
+						<view :class="['fld', 'fld-lg', 'fld-sel', 'mt6', focus == 'conc' ? 'fld-on' : '']">
+							<input :focus="focus == 'conc'" class="inp inp-lg" type="digit" :value="v.conc" @input="setF('conc', ($event as UniInputEvent).detail.value)" @focus="focus = 'conc'" @blur="blurField('conc')" />
+							<view v-if="focus != 'conc'" class="lp-cover" @touchstart="lpStart('conc', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('conc')"></view>
+							<unit-select class="ml8" :value="v.unit" :ids="DUNIT_IDS" :labels="DUNIT_LABELS" :width="DUNIT_W" @change="setUnit"></unit-select>
+						</view>
+					</view>
+				</view>
+			</scroll-view>
+			<view class="acts" :style="{ paddingBottom: actsBottom + 'px' }">
+				<view class="retake" @click="retake">
+					<text class="retake-t">重新拍摄</text>
+				</view>
+				<view class="apply" @click="apply">
+					<text class="apply-t">{{ applyLabel }}</text>
+					<image class="ico20 ml6" src="/static/icons/checkb-FFFFFF.svg"></image>
+				</view>
+			</view>
+		</view>
+
+		<dial-knob v-if="dialOpen" ref="dialRef" class="overlay" :value="dialValue" :spec="dialSpec" :label="dialLabel" :unit="dialUnit"
+			result="" :anchor-y="dialY" :dragging="dialDrag" @change="dialChange" @close="dialClose"></dial-knob>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { molarMass } from '@/common/chem.uts'
+	import { ScanValue, DialSpec, concSpec, linSpec } from '@/common/types.uts'
+	import { runOcr, OcrResult, OcrLine } from '@/common/ocr.uts'
+	import { parseLabel, LabelInfo } from '@/common/label.uts'
+	import { DEMO } from '@/common/config.uts'
+	import { noSuggestTree } from '@/common/native.uts'
+
+	defineOptions({ styleIsolation: 'app' })
+
+	const props = defineProps({
+		kind: { type: String, default: 'solid' } // solid | liquid | stock | component
+	})
+	const emit = defineEmits(['apply', 'close'])
+
+	type Box = { x : number, y : number, w : number, h : number, tx : number, ty : number, label : string }
+
+	const DUNIT_IDS = ['M', 'mM', 'uM', 'gL', 'pct', 'x']
+	const DUNIT_LABELS = ['mol/L', 'mmol/L', 'µmol/L', 'g/L', '% w/v', '倍 ×']
+	const DUNIT_W = 92
+
+	const win = uni.getWindowInfo()
+	const topPad = Math.max(52, win.statusBarHeight + 5)
+	const ctrlBottom = Math.max(48, win.safeAreaInsets.bottom + 16)
+	const actsBottom = Math.max(32, win.safeAreaInsets.bottom + 8)
+
+	const phase = ref('camera')
+	const photo = ref('')
+	const camOk = ref(true)
+	const camReady = ref(false)
+	const focus = ref('')
+	const v = reactive({ name: '', formula: '', purity: '', grade: '', w: '', rho: '', conc: '', unit: 'M' } as ScanValue)
+	const labelM = ref(0)
+	const wRange = ref('')
+	const boxes = ref<Box[]>([])
+	const lineRef = ref<UniElement | null>(null)
+	const photoRef = ref<UniElement | null>(null)
+	const rootRef = ref<UniElement | null>(null)
+	let lines : OcrLine[] = []
+	let lineInfo : LabelInfo | null = null
+	let imgW = 0
+	let imgH = 0
+	const PHOTO_R_H = 260 // 结果页照片区高度，与 .photo-r 一致
+	let photoW = 390
+	let photoH = 260
+	let busy = false
+
+	const applyLabel = computed(() : string => {
+		const k = props.kind
+		if (k == 'stock') return '填入原液浓度'
+		if (k == 'component') return '添加为组分'
+		return '填入配制'
+	})
+	const hint = computed(() : string => {
+		if (phase.value == 'scan') return '识别中…'
+		return camOk.value ? '对准标签' : '无法打开相机，可从相册选择'
+	})
+	const mMismatch = computed(() : boolean => {
+		if (labelM.value <= 0) return false
+		const M = molarMass(v.formula)
+		return M == null || Math.abs(M - labelM.value) >= 0.05
+	})
+	const mMsg = computed(() : string => {
+		const M = molarMass(v.formula)
+		return M == null ? '无法识别该化学式' : M.toFixed(2) + ' g/mol · 与标签 ' + labelM.value.toString() + ' 不一致'
+	})
+
+	onMounted(() => {
+		uni.setNavigationBarColor({ frontColor: '#ffffff', backgroundColor: '#0F1113' })
+		// 先拿到相机权限再挂载 camera 组件，否则首次授权后预览是黑的
+		// #ifdef APP-ANDROID
+		const perms = ['android.permission.CAMERA']
+		const act = UTSAndroid.getUniActivity()!
+		if (UTSAndroid.checkSystemPermissionGranted(act, perms)) {
+			camReady.value = true
+		} else {
+			UTSAndroid.requestSystemPermission(act, perms, (allRight : boolean, granted : string[]) => {
+				camReady.value = allRight
+				if (!allRight) camOk.value = false
+			}, (doNotAskAgain : boolean, denied : string[]) => {
+				camOk.value = false
+			})
+		}
+		// #endif
+		// #ifndef APP-ANDROID
+		camReady.value = true
+		// #endif
+	})
+	onUnmounted(() => {
+		uni.setNavigationBarColor({ frontColor: '#000000', backgroundColor: '#F3F4F1' })
+	})
+
+	// 用到时再量照片区域的实际尺寸：取景时撑满剩余高度，结果页固定 260，宽度随屏幕
+	function measurePhoto() {
+		const el = photoRef.value
+		if (el == null) return
+		const r = el.getBoundingClientRect()
+		if (r.width > 0 && r.height > 0) {
+			photoW = r.width
+			photoH = r.height
+		}
+	}
+
+	function setF(k : string, val : string) {
+		if (k == 'name') v.name = val
+		else if (k == 'formula') v.formula = val
+		else if (k == 'purity') v.purity = val
+		else if (k == 'grade') v.grade = val
+		else if (k == 'w') v.w = val
+		else if (k == 'rho') v.rho = val
+		else if (k == 'conc') v.conc = val
+	}
+	function getF(k : string) : string {
+		if (k == 'purity') return v.purity
+		if (k == 'w') return v.w
+		if (k == 'rho') return v.rho
+		if (k == 'conc') return v.conc
+		return ''
+	}
+	function setUnit(id : string) {
+		v.unit = id
+	}
+
+	function onCamErr(ev : UniCameraErrorEvent) {
+		camOk.value = false
+	}
+
+	function close() {
+		emit('close')
+	}
+
+	// 扫描线是 v-if 挂载的，切到识别阶段后要等它真正创建出来（慢机器上可能超过一帧）再启动动画
+	function runScanline(tries : number) {
+		if (phase.value != 'scan') return
+		const el = lineRef.value
+		if (el == null) {
+			if (tries < 40) setTimeout(() => { runScanline(tries + 1) }, 50)
+			return
+		}
+		measurePhoto()
+		// 在四角框内上下扫：框上沿 top 36px，下沿 bottom 60px（见 .corner），1.4 s 往返（原生端按像素给值）
+		const a = '39px', b = Math.max(40, photoH - 60 - 5).toFixed(1) + 'px'
+		el.animate([{ top: a } as UniAnimationKeyframe, { top: b } as UniAnimationKeyframe, { top: a } as UniAnimationKeyframe],
+			{ duration: 1400, iterations: 100000, easing: 'ease-in-out' } as UniAnimationOption)
+	}
+
+	function startScanline() {
+		setTimeout(() => { runScanline(0) }, 30)
+	}
+
+	// 把 OCR 行的位置（原图像素）映射到照片区域（aspectFill），画出蓝框和字段名
+	function layoutBoxes() {
+		const info = lineInfo
+		if (info == null || imgW <= 0 || imgH <= 0) return
+		measurePhoto()
+		// 刚切到结果页时布局可能还没更新（还是取景时的高度）：宽度不随阶段变化，高度直接用 .photo-r 的定值
+		photoH = PHOTO_R_H
+		const sc = Math.max(photoW / imgW, photoH / imgH)
+		const ox = (photoW - imgW * sc) / 2
+		const oy = (photoH - imgH * sc) / 2
+		const out : Box[] = []
+		const add = (idx : number, label : string) => {
+			if (idx < 0 || idx >= lines.length) return
+			const l = lines[idx]
+			if (l.w <= 0) return
+			const x = l.x * sc + ox, y = l.y * sc + oy, w = l.w * sc, h = l.h * sc
+			const tw = label.length * 10 + 10
+			if (label == '浓度') {
+				// 设计稿：浓度标签放在框的正下方
+				out.push({ x: x - 5, y: y - 3, w: w + 10, h: h + 6, tx: x + w / 2 - 16, ty: y + h + 6, label: label } as Box)
+				return
+			}
+			let tx = x + w + 10
+			if (tx + tw > photoW - 4) tx = Math.max(4, x - 10 - tw)
+			out.push({ x: x - 5, y: y - 3, w: w + 10, h: h + 6, tx: tx, ty: y + h / 2 - 9, label: label } as Box)
+		}
+		add(info.nameLine, '名称')
+		if (info.formulaLine != info.nameLine) add(info.formulaLine, '化学式')
+		add(info.mLine, '摩尔质量')
+		if (props.kind == 'liquid') {
+			add(info.wLine, '质量分数')
+			add(info.rhoLine, '密度')
+		} else if (props.kind == 'stock') {
+			add(info.concLine, '浓度')
+		} else {
+			add(info.purityLine, '含量')
+		}
+		boxes.value = out
+	}
+
+	function fillDemo() {
+		const k = props.kind
+		if (k == 'liquid') {
+			v.name = '浓盐酸'
+			v.formula = 'HCl'
+			v.w = '37'
+			v.rho = '1.18'
+			labelM.value = 36.46
+			wRange.value = '36.0%～38.0%'
+		} else if (k == 'stock') {
+			v.name = '盐酸标准溶液'
+			v.formula = 'HCl'
+			v.conc = '2.000'
+			v.unit = 'M'
+		} else if (k == 'component') {
+			v.name = 'D-无水葡萄糖'
+			v.formula = 'C6H12O6'
+			v.purity = '99.5'
+			v.grade = 'AR 分析纯'
+			labelM.value = 180.16
+		} else {
+			v.name = '硫酸铜（五水）'
+			v.formula = 'CuSO4·5H2O'
+			v.purity = '99.0'
+			v.grade = 'AR 分析纯'
+			labelM.value = 249.68
+		}
+	}
+
+	function recognize(path : string) {
+		photo.value = path
+		phase.value = 'scan'
+		boxes.value = []
+		startScanline()
+		const t0 = Date.now()
+		runOcr(path, (res : OcrResult | null, err : string) => {
+			// 至少展示一会儿扫描动画，避免闪一下就结束
+			const wait = Math.max(0, 900 - (Date.now() - t0))
+			setTimeout(() => {
+				busy = false
+				if (phase.value != 'scan') return
+				if (res == null) {
+					lines = []
+					lineInfo = null
+					if (DEMO) fillDemo()
+					phase.value = 'result'
+					setTimeout(() => {
+						noSuggestTree(rootRef.value)
+					}, 60)
+					if (!DEMO) uni.showToast({ title: err, icon: 'none', duration: 2500 })
+					return
+				}
+				lines = res.lines
+				imgW = res.imgW
+				imgH = res.imgH
+				const info = parseLabel(res.lines, props.kind == 'component' ? 'solid' : props.kind, res.fields)
+				lineInfo = info
+				v.name = info.name
+				v.formula = info.formula
+				v.purity = info.purity
+				v.grade = info.grade
+				v.w = info.w
+				v.rho = info.rho
+				if (info.conc.length > 0) v.conc = info.conc
+				if (info.unit.length > 0) v.unit = info.unit
+				labelM.value = info.labelM
+				wRange.value = info.wRange
+				phase.value = 'result'
+				setTimeout(() => {
+					layoutBoxes()
+					noSuggestTree(rootRef.value)
+				}, 60)
+			}, wait)
+		})
+	}
+
+	function pickAlbum() {
+		if (busy) return
+		uni.chooseImage({
+			count: 1,
+			sourceType: ['album'],
+			success: (res : ChooseImageSuccess) => {
+				if (res.tempFilePaths.length > 0) {
+					busy = true
+					recognize(res.tempFilePaths[0])
+				}
+			}
+		} as ChooseImageOptions)
+	}
+
+	function shoot() {
+		if (busy) return
+		if (!camOk.value) {
+			pickAlbum()
+			return
+		}
+		const ctx = uni.createCameraContext()
+		if (ctx == null) {
+			pickAlbum()
+			return
+		}
+		busy = true
+		ctx.takePhoto({
+			quality: 'normal',
+			selfieMirror: false,
+			success: (res : CameraContextTakePhotoResult) => {
+				const p = res.tempImagePath
+				if (p == null || p.length == 0) {
+					busy = false
+					return
+				}
+				recognize(p)
+			},
+			fail: (ev : CameraContextFail) => {
+				busy = false
+				uni.showToast({ title: '拍照失败', icon: 'none' })
+			}
+		} as CameraContextTakePhotoOptions)
+	}
+
+	function retake() {
+		boxes.value = []
+		phase.value = 'camera'
+	}
+
+	function apply() {
+		const out : ScanValue = { name: v.name.trim(), formula: v.formula.trim(), purity: v.purity.trim(), grade: v.grade.trim(), w: v.w.trim(), rho: v.rho.trim(), conc: v.conc.trim(), unit: v.unit }
+		emit('apply', out)
+	}
+
+	// —— 长按旋钮 ——
+	const dialRef = ref<ComponentPublicInstance | null>(null)
+	const dialOpen = ref(false)
+	const dialKey = ref('')
+	const dialY = ref(430)
+	const dialDrag = ref(false)
+	let dialOrig = ''
+	let lpTimer = 0
+	let lpFired = false
+	let lpOn = false
+	let lpX = 0
+	let lpY = 0
+
+	function lpStart(key : string, e : UniTouchEvent) {
+		if (e.touches.length == 0 || dialOpen.value) return
+		lpFired = false
+		const t = e.touches[0]
+		lpX = t.clientX
+		lpY = t.clientY
+		lpOn = true
+		clearTimeout(lpTimer)
+		lpTimer = setTimeout(() => {
+			if (lpOn) {
+				lpOn = false
+				lpFired = true
+				uni.hideKeyboard()
+				focus.value = ''
+				dialOrig = getF(key)
+				dialKey.value = key
+				dialY.value = lpY
+				dialDrag.value = true
+				dialOpen.value = true
+				try {
+					uni.vibrateShort({ type: 'medium' } as VibrateShortOptions)
+				} catch (err) { }
+			}
+		}, 450)
+	}
+	// 只清除自己的聚焦状态：切换输入框时旧输入框的 blur 晚于新输入框的聚焦
+	function blurField(k : string) {
+		if (focus.value == k) focus.value = ''
+	}
+	function tapField(k : string) {
+		if (lpFired) {
+			lpFired = false
+			return
+		}
+		focus.value = k
+	}
+	function lpMove(e : UniTouchEvent) {
+		if (e.touches.length == 0) return
+		const t = e.touches[0]
+		if (dialOpen.value && dialDrag.value) {
+			if (e.cancelable) e.preventDefault()
+			e.stopPropagation()
+			dialRef.value?.$callMethod('extMove', t.clientX, t.clientY)
+			return
+		}
+		if (lpOn && (Math.abs(t.clientX - lpX) > 8 || Math.abs(t.clientY - lpY) > 8)) {
+			clearTimeout(lpTimer)
+			lpOn = false
+		}
+	}
+	function lpEnd(e : UniTouchEvent) {
+		clearTimeout(lpTimer)
+		lpOn = false
+		if (dialOpen.value && dialDrag.value) {
+			dialDrag.value = false
+			if (e.changedTouches.length > 0) {
+				const t = e.changedTouches[0]
+				dialRef.value?.$callMethod('extUp', t.clientX, t.clientY)
+			}
+		}
+	}
+	function lpCancel(ev : UniTouchEvent) {
+		clearTimeout(lpTimer)
+		lpOn = false
+		if (dialOpen.value && dialDrag.value) {
+			dialDrag.value = false
+			dialRef.value?.$callMethod('extCancel')
+		}
+	}
+	const dialValue = computed(() : string => dialOpen.value ? getF(dialKey.value) : '')
+	const dialLabel = computed(() : string => {
+		const k = dialKey.value
+		if (k == 'purity') return '含量'
+		if (k == 'w') return '质量分数 w'
+		if (k == 'rho') return '密度 ρ'
+		return '原液浓度'
+	})
+	const dialUnit = computed(() : string => {
+		const k = dialKey.value
+		if (k == 'rho') return 'g/mL'
+		if (k == 'conc') {
+			const i = DUNIT_IDS.indexOf(v.unit)
+			return i >= 0 ? (v.unit == 'x' ? '×' : DUNIT_LABELS[i]) : ''
+		}
+		return '%'
+	})
+	const dialSpec = computed(() : DialSpec => {
+		const k = dialKey.value
+		if (k == 'purity') return linSpec(1, 0.1, 50, 100, 99)
+		if (k == 'w') return linSpec(1, 0.1, 0.1, 100, 37)
+		if (k == 'rho') return linSpec(0.1, 0.01, 0.5, 3, 1)
+		return concSpec(1)
+	})
+	function dialChange(val : string) {
+		if (dialOpen.value) setF(dialKey.value, val)
+	}
+	function dialClose(commit : boolean) {
+		if (!dialOpen.value) return
+		if (!commit) setF(dialKey.value, dialOrig)
+		dialOpen.value = false
+		dialDrag.value = false
+	}
+</script>
+
+<style>
+	.root {
+		background-color: #0F1113;
+	}
+
+	.top {
+		flex-direction: row;
+		align-items: center;
+		padding-left: 12px;
+		padding-right: 12px;
+		padding-bottom: 10px;
+	}
+
+	.close {
+		width: 44px;
+		height: 44px;
+		border-radius: 22px;
+		background-color: rgba(243, 244, 241, 0.12);
+		align-items: center;
+		justify-content: center;
+	}
+
+	.title-w {
+		flex: 1;
+		align-items: center;
+		margin: 0 52px 0 52px;
+	}
+
+	.title {
+		font-family: ns7;
+		font-size: 17px;
+		line-height: 25px;
+		color: #F3F4F1;
+	}
+
+	.side {
+		width: 44px;
+	}
+
+	.photo {
+		position: relative;
+		overflow: hidden;
+		background-color: #1B1F22;
+	}
+
+	.photo-c {
+		flex: 1;
+	}
+
+	.photo-r {
+		height: 260px;
+	}
+
+	.cam {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+	}
+
+	.shot {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 100%;
+	}
+
+	.box {
+		position: absolute;
+		border: 2px solid #1F5FAD;
+		border-radius: 4px;
+	}
+
+	.btag {
+		position: absolute;
+		height: 18px;
+		padding: 0 5px;
+		border-radius: 3px;
+		background-color: #1F5FAD;
+	}
+
+	.btag-t {
+		font-family: ns7;
+		font-size: 10px;
+		line-height: 18px;
+		color: #FFFFFF;
+		white-space: nowrap;
+	}
+
+	.corner {
+		position: absolute;
+		width: 34px;
+		height: 34px;
+		border-color: #F3F4F1;
+	}
+
+	.c-tl {
+		left: 36px;
+		top: 36px;
+		border-left-width: 3px;
+		border-top-width: 3px;
+		border-left-style: solid;
+		border-top-style: solid;
+		border-top-left-radius: 10px;
+	}
+
+	.c-tr {
+		right: 36px;
+		top: 36px;
+		border-right-width: 3px;
+		border-top-width: 3px;
+		border-right-style: solid;
+		border-top-style: solid;
+		border-top-right-radius: 10px;
+	}
+
+	.c-bl {
+		left: 36px;
+		bottom: 60px;
+		border-left-width: 3px;
+		border-bottom-width: 3px;
+		border-left-style: solid;
+		border-bottom-style: solid;
+		border-bottom-left-radius: 10px;
+	}
+
+	.c-br {
+		right: 36px;
+		bottom: 60px;
+		border-right-width: 3px;
+		border-bottom-width: 3px;
+		border-right-style: solid;
+		border-bottom-style: solid;
+		border-bottom-right-radius: 10px;
+	}
+
+	.hint {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 18px;
+		text-align: center;
+		font-family: ns4;
+		font-size: 14px;
+		line-height: 20px;
+		color: #F3F4F1;
+	}
+
+	.scanline {
+		position: absolute;
+		left: 40px;
+		right: 40px;
+		top: 39px;
+		height: 2px;
+		background-color: #6EA8F5;
+		box-shadow: 0 0 12px 2px rgba(110, 168, 245, 0.6);
+	}
+
+	.ctrl {
+		flex-direction: row;
+		align-items: center;
+		padding-top: 20px;
+		padding-left: 28px;
+		padding-right: 28px;
+	}
+
+	.ctrl-side {
+		flex: 1;
+		align-items: flex-start;
+	}
+
+	.ctrl-mid {
+		flex: 1;
+		align-items: center;
+	}
+
+	.ctrl-end {
+		align-items: flex-end;
+	}
+
+	.gal {
+		width: 52px;
+		height: 52px;
+		border-radius: 14px;
+		border: 1px solid #3A4045;
+		background-color: #1B1F22;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.ico24 {
+		width: 24px;
+		height: 24px;
+	}
+
+	.shutter {
+		width: 76px;
+		height: 76px;
+		border-radius: 38px;
+		border: 4px solid #F3F4F1;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.shutter-in {
+		width: 60px;
+		height: 60px;
+		border-radius: 30px;
+		background-color: #F3F4F1;
+	}
+
+	.manual {
+		min-height: 44px;
+		padding: 0 4px;
+		justify-content: center;
+	}
+
+	.manual-t {
+		font-size: 15px;
+		font-weight: 500;
+		color: #F3F4F1;
+	}
+
+	.sheet {
+		flex: 1;
+		margin-top: -20px;
+		background-color: #F3F4F1;
+		border-top-left-radius: 24px;
+		border-top-right-radius: 24px;
+	}
+
+	.sheet-s {
+		flex: 1;
+	}
+
+	.sheet-in {
+		padding: 18px 16px 12px 16px;
+	}
+
+	.rh2 {
+		font-family: ns7;
+		font-size: 16px;
+		line-height: 23px;
+		color: #16191B;
+	}
+
+	.mt6 {
+		margin-top: 6px;
+	}
+
+	.mt12 {
+		margin-top: 12px;
+	}
+
+	.ml6 {
+		margin-left: 6px;
+	}
+
+	.ml8 {
+		margin-left: 8px;
+	}
+
+	.ml10 {
+		margin-left: 10px;
+	}
+
+	.col0 {
+		min-width: 0;
+	}
+
+	.fld12 {
+		padding: 0 12px;
+	}
+
+	.fld-sel {
+		padding: 0 6px 0 14px;
+	}
+
+	.fld-amber {
+		border-color: #EBC58A;
+	}
+
+	.inp-sans {
+		flex: 1;
+		height: 44px;
+		font-size: 17px;
+		color: #16191B;
+	}
+
+	.u15 {
+		margin-left: 6px;
+		font-family: ns4;
+		font-size: 15px;
+		line-height: 21px;
+		color: #4F555A;
+	}
+
+	.u14 {
+		margin-left: 6px;
+		font-family: ns4;
+		font-size: 14px;
+		line-height: 20px;
+		color: #4F555A;
+	}
+
+	.warn13 {
+		font-family: ns4;
+		font-size: 13px;
+		line-height: 19.5px;
+		color: #8A4B00;
+	}
+
+	.acts {
+		flex-direction: row;
+		padding-top: 12px;
+		padding-left: 16px;
+		padding-right: 16px;
+		border-top: 1px solid #DCDFD8;
+		background-color: #F3F4F1;
+	}
+
+	.retake {
+		flex: 1;
+		height: 52px;
+		border-radius: 14px;
+		border: 1px solid #C9CDC5;
+		background-color: #FFFFFF;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.retake-t {
+		font-size: 15px;
+		font-weight: 500;
+		color: #16191B;
+	}
+
+	.apply {
+		flex: 2;
+		margin-left: 10px;
+		height: 52px;
+		border-radius: 14px;
+		background-color: #1F5FAD;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.apply-t {
+		font-size: 16px;
+		font-weight: 700;
+		color: #FFFFFF;
+	}
+
+	.overlay {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+	}
+</style>

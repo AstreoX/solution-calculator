@@ -1,0 +1,28 @@
+// 各页面输入状态的本地保存（重启 App 后恢复）
+
+export function loadState(key : string) : UTSJSONObject | null {
+	try {
+		const s = uni.getStorageSync('state:' + key)
+		if (s == null) return null
+		if (typeof s == 'string') {
+			const str = s as string
+			if (str.length == 0) return null
+			return JSON.parseObject(str)
+		}
+		return null
+	} catch (e) {
+		return null
+	}
+}
+
+const timers = new Map<string, number>()
+
+export function saveState(key : string, o : UTSJSONObject) {
+	const t = timers.get(key)
+	if (t != null) clearTimeout(t)
+	const str = JSON.stringify(o)
+	timers.set(key, setTimeout(() => {
+		timers.delete(key)
+		uni.setStorageSync('state:' + key, str)
+	}, 400))
+}

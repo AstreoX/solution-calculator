@@ -1,0 +1,61 @@
+// —— 自检：离线库键函数与构建脚本一致（tools/db/key_vectors.json）——
+import { normF, hillKey } from './chem.uts'
+import { nameKey, shardOf, queryName, queryHill, Compound } from './db.uts'
+
+const KF : string[][] = [["CuSO4·5H2O", "CuSO4·5H2O", "CuH10O9S"], ["CuSO₄·5H₂O", "CuSO4·5H2O", "CuH10O9S"], ["CuSO4.5H2O", "CuSO4·5H2O", "CuH10O9S"], [" CH3COOH ", "CH3COOH", "C2H4O2"], ["NaCl", "NaCl", "ClNa"], ["(NH4)2SO4", "(NH4)2SO4", "H8N2O4S"], ["K4[Fe(CN)6]·3H2O", "K4[Fe(CN)6]·3H2O", "C6H6FeK4N6O3"], ["C10H14N2Na2O8·2H2O", "C10H14N2Na2O8·2H2O", "C10H18N2Na2O10"], ["H2C2O4*2H2O", "H2C2O4·2H2O", "C2H6O6"], ["Na2B4O7•10H2O", "Na2B4O7·10H2O", "B4H20Na2O17"]]
+const KFS : number[] = [73, 73, 73, 119, 28, 83, 22, 75, 125, 117]
+const KN : string[][] = [["硫酸铜", "硫酸铜"], ["五水硫酸铜", "五水硫酸铜"], ["Copper Sulfate", "coppersulfate"], ["ＥＤＴＡ　二钠", "edta二钠"], ["7758-99-8", "7758-99-8"], ["Tris", "tris"], ["β-巯基乙醇", "β-巯基乙醇"], ["𬬻", "𬬻"]]
+const KNS : number[] = [15, 106, 71, 210, 123, 40, 247, 9]
+
+export function selfTest() {
+	let bad = 0
+	for (let i = 0; i < KF.length; i++) {
+		const nf = normF(KF[i][0]), hk = hillKey(KF[i][0])
+		const sh = hk == null ? -1 : shardOf(hk, 128)
+		if (nf != KF[i][1] || hk != KF[i][2] || sh != KFS[i]) {
+			bad++
+			console.log('SELFTEST formula mismatch', KF[i][0], nf, hk, sh, KFS[i])
+		}
+	}
+	for (let i = 0; i < KN.length; i++) {
+		const k = nameKey(KN[i][0]), sh = shardOf(k, 256)
+		if (k != KN[i][1] || sh != KNS[i]) {
+			bad++
+			console.log('SELFTEST name mismatch', KN[i][0], k, sh, KNS[i])
+		}
+	}
+	console.log('SELFTEST done, mismatches:', bad)
+	const qs = ['caffeine', '7758-99-8', '甘氨酸', '胆矾', 'sodium dodecyl sulfate', '4-硝基苯酚']
+	for (let i = 0; i < qs.length; i++) {
+		const q = qs[i]
+		queryName(q, (list : Compound[]) => {
+			console.log('SELFTEST name', q, list.length > 0 ? list[0].f + ' ' + list[0].zh + ' ' + list[0].M.toString() : 'NOT FOUND')
+		})
+	}
+	queryHill('C8H10N4O2', (list : Compound[]) => {
+		console.log('SELFTEST hill C8H10N4O2', list.length > 0 ? list[0].zh + ' / ' + list[0].en : 'NOT FOUND')
+	})
+}
+
+// 开发自检：把元素树的布局（位置、尺寸、文字）打印到控制台，用于与设计稿逐元素对照（仅 DEMO 模式调用）
+
+function walk(el : UniElement, depth : number, out : string[]) {
+	const r = el.getBoundingClientRect()
+	let line = depth.toFixed(0) + '\t' + el.tagName + '\t' + r.x.toFixed(1) + '\t' + r.y.toFixed(1) + '\t' + r.width.toFixed(1) + '\t' + r.height.toFixed(1)
+	if (el.tagName == 'TEXT') {
+		const t = (el as UniTextElement).value
+		line += '\t' + t.replace(/\n/g, ' ')
+	}
+	out.push(line)
+	const ch = el.children
+	for (let i = 0; i < ch.length; i++) walk(ch[i], depth + 1, out)
+}
+
+export function dumpLayout(tag : string, el : UniElement | null) {
+	if (el == null) return
+	const out : string[] = []
+	walk(el, 0, out)
+	console.log('LAYBEGIN|' + tag)
+	for (let i = 0; i < out.length; i++) console.log('LAY|' + tag + '|' + out[i])
+	console.log('LAYEND|' + tag)
+}

@@ -1,0 +1,535 @@
+# Curated common lab reagents (hand-checked). One reagent per line, fields separated by " | ":
+#   f | zh | aliases (";"-separated, zh and en mixed) | en | CAS | kind | w | wMin-wMax | rho | note
+# kind: S = solid (default when omitted), L = liquid.
+# For liquids: w = typical label mass fraction (%) of the solute given in f (e.g. HCl for 盐酸, NH3 for 氨水),
+#   wMin-wMax = typical label range, rho = density g/mL at 20 °C at w.  rho "=" means: take it from density.json
+#   (interpolated at w) — build_db.py fills it in and cross-checks it.
+# A leading "!" on the zh field forces priority +1 within the curated set (used to order same-formula isomers).
+# CAS numbers are validated (check digit) and cross-checked against Wikidata by build_db.py.
+
+# ---------------------------------------------------------------- required list (names exactly as specified)
+NaCl | 氯化钠 | 食盐;精盐;sodium chloride;salt | sodium chloride | 7647-14-5
+KCl | 氯化钾 | potassium chloride | potassium chloride | 7447-40-7
+CaCl2 | 氯化钙 | 无水氯化钙;calcium chloride;calcium chloride anhydrous | calcium chloride | 10043-52-4
+CaCl2·2H2O | 二水氯化钙 | 二水合氯化钙;氯化钙二水合物;氯化钙（二水）;calcium chloride dihydrate | calcium chloride dihydrate | 10035-04-8
+MgCl2 | 氯化镁 | 无水氯化镁;magnesium chloride;magnesium chloride anhydrous | magnesium chloride | 7786-30-3
+MgCl2·6H2O | 六水氯化镁 | 六水合氯化镁;氯化镁六水合物;氯化镁（六水）;magnesium chloride hexahydrate | magnesium chloride hexahydrate | 7791-18-6
+MgSO4·7H2O | 七水硫酸镁 | 七水合硫酸镁;硫酸镁七水合物;硫酸镁（七水）;泻盐;泻利盐;苦盐;epsom salt;magnesium sulfate heptahydrate;magnesium sulphate heptahydrate | magnesium sulfate heptahydrate | 10034-99-8
+Na2HPO4 | 磷酸氢二钠 | 无水磷酸氢二钠;磷酸氢二钠（无水）;disodium hydrogen phosphate;sodium phosphate dibasic;disodium phosphate | disodium hydrogen phosphate | 7558-79-4
+Na2HPO4·12H2O | 十二水磷酸氢二钠 | 十二水合磷酸氢二钠;磷酸氢二钠十二水合物;磷酸氢二钠（十二水）;disodium hydrogen phosphate dodecahydrate;sodium phosphate dibasic dodecahydrate | disodium hydrogen phosphate dodecahydrate | 10039-32-4
+KH2PO4 | 磷酸二氢钾 | 磷酸一钾;potassium dihydrogen phosphate;monopotassium phosphate;potassium phosphate monobasic | potassium dihydrogen phosphate | 7778-77-0
+NaH2PO4 | 磷酸二氢钠 | 无水磷酸二氢钠;磷酸二氢钠（无水）;sodium dihydrogen phosphate;monosodium phosphate;sodium phosphate monobasic | sodium dihydrogen phosphate | 7558-80-7
+NaH2PO4·2H2O | 二水磷酸二氢钠 | 二水合磷酸二氢钠;磷酸二氢钠二水合物;磷酸二氢钠（二水）;sodium dihydrogen phosphate dihydrate;sodium phosphate monobasic dihydrate | sodium dihydrogen phosphate dihydrate | 13472-35-0
+K2HPO4 | 磷酸氢二钾 | 无水磷酸氢二钾;dipotassium hydrogen phosphate;dipotassium phosphate;potassium phosphate dibasic | dipotassium hydrogen phosphate | 7758-11-4
+CuSO4 | 硫酸铜 | 无水硫酸铜;硫酸铜（无水）;硫酸铜(II);copper sulfate;copper sulphate;cupric sulfate;copper(II) sulfate anhydrous | copper(II) sulfate | 7758-98-7
+CuSO4·5H2O | 五水硫酸铜 | 胆矾;蓝矾;硫酸铜（五水）;五水合硫酸铜;硫酸铜五水合物;copper sulfate pentahydrate;copper sulphate pentahydrate;cupric sulfate pentahydrate;blue vitriol | copper(II) sulfate pentahydrate | 7758-99-8
+NaOH | 氢氧化钠 | 烧碱;火碱;苛性钠;片碱;sodium hydroxide;caustic soda | sodium hydroxide | 1310-73-2
+KOH | 氢氧化钾 | 苛性钾;potassium hydroxide;caustic potash | potassium hydroxide | 1310-58-3
+HCl | 盐酸 | 浓盐酸;氢氯酸;hydrochloric acid;muriatic acid | hydrochloric acid | 7647-01-0 | L | 37 | 36-38 | =
+H2SO4 | 硫酸 | 浓硫酸;硫镪水;sulfuric acid;sulphuric acid | sulfuric acid | 7664-93-9 | L | 98 | 95-98 | =
+HNO3 | 硝酸 | 浓硝酸;硝镪水;nitric acid | nitric acid | 7697-37-2 | L | 65 | 65-68 | =
+H3PO4 | 磷酸 | 浓磷酸;正磷酸;orthophosphoric acid;phosphoric acid | phosphoric acid | 7664-38-2 | L | 85 | 85-87 | =
+CH3COOH | 乙酸 | 冰醋酸;冰乙酸;醋酸;acetic acid;glacial acetic acid;ethanoic acid;HOAc;AcOH | acetic acid | 64-19-7 | L | 99.5 | 99.5-100 | =
+CH3COONa | 乙酸钠 | 无水乙酸钠;醋酸钠;无水醋酸钠;sodium acetate;sodium acetate anhydrous | sodium acetate | 127-09-3
+CH3COONa·3H2O | 三水乙酸钠 | 三水合乙酸钠;乙酸钠三水合物;三水醋酸钠;三水合醋酸钠;醋酸钠（三水）;乙酸钠（三水）;sodium acetate trihydrate | sodium acetate trihydrate | 6131-90-4
+Na2CO3 | 碳酸钠 | 纯碱;苏打;无水碳酸钠;碱面;soda ash;sodium carbonate;sodium carbonate anhydrous | sodium carbonate | 497-19-8
+NaHCO3 | 碳酸氢钠 | 小苏打;重碳酸钠;酸式碳酸钠;重曹;sodium bicarbonate;sodium hydrogen carbonate;baking soda | sodium bicarbonate | 144-55-8
+AgNO3 | 硝酸银 | silver nitrate | silver nitrate | 7761-88-8
+BaCl2 | 氯化钡 | 无水氯化钡;barium chloride;barium chloride anhydrous | barium chloride | 10361-37-2
+BaCl2·2H2O | 二水氯化钡 | 二水合氯化钡;氯化钡二水合物;氯化钡（二水）;barium chloride dihydrate | barium chloride dihydrate | 10326-27-9
+KMnO4 | 高锰酸钾 | 灰锰氧;PP粉;potassium permanganate | potassium permanganate | 7722-64-7
+K2Cr2O7 | 重铬酸钾 | 红矾钾;potassium dichromate;potassium bichromate | potassium dichromate | 7778-50-9
+FeSO4·7H2O | 七水硫酸亚铁 | 绿矾;皂矾;青矾;七水合硫酸亚铁;硫酸亚铁七水合物;硫酸亚铁（七水）;ferrous sulfate heptahydrate;iron(II) sulfate heptahydrate;green vitriol | iron(II) sulfate heptahydrate | 7782-63-0
+FeCl3 | 氯化铁 | 三氯化铁;无水三氯化铁;无水氯化铁;氯化铁(III);ferric chloride;iron(III) chloride;iron trichloride | iron(III) chloride | 7705-08-0
+FeCl3·6H2O | 六水氯化铁 | 六水合氯化铁;六水三氯化铁;六水合三氯化铁;氯化铁六水合物;三氯化铁（六水）;ferric chloride hexahydrate;iron(III) chloride hexahydrate | iron(III) chloride hexahydrate | 10025-77-1
+Na2S2O3·5H2O | 五水硫代硫酸钠 | 大苏打;海波;五水合硫代硫酸钠;硫代硫酸钠五水合物;硫代硫酸钠（五水）;sodium thiosulfate pentahydrate;hypo | sodium thiosulfate pentahydrate | 10102-17-7
+KI | 碘化钾 | potassium iodide | potassium iodide | 7681-11-0
+KBr | 溴化钾 | potassium bromide | potassium bromide | 7758-02-3
+H2O2 | 过氧化氢 | 双氧水;过氧化氢溶液;医用双氧水;hydrogen peroxide;hydrogen peroxide solution | hydrogen peroxide | 7722-84-1 | L | 30 | 30-31 | =
+NaClO | 次氯酸钠 | 次氯酸钠溶液;漂白水;84消毒液;sodium hypochlorite;sodium hypochlorite solution;bleach | sodium hypochlorite | 7681-52-9 | L | 10 | 5-13 | 1.16 | w 为 NaClO 质量分数（近似）；标签常标“有效氯”，NaClO% ≈ 有效氯% × 1.05；密度随浓度约 1.07–1.22，仅供参考
+NH4Cl | 氯化铵 | 卤砂;硇砂;ammonium chloride;sal ammoniac | ammonium chloride | 12125-02-9
+(NH4)2SO4 | 硫酸铵 | 硫铵;肥田粉;ammonium sulfate;ammonium sulphate | ammonium sulfate | 7783-20-2
+Na2SO4 | 硫酸钠 | 无水硫酸钠;元明粉;硫酸钠（无水）;sodium sulfate;sodium sulphate;sodium sulfate anhydrous | sodium sulfate | 7757-82-6
+ZnSO4·7H2O | 七水硫酸锌 | 皓矾;七水合硫酸锌;硫酸锌七水合物;硫酸锌（七水）;zinc sulfate heptahydrate;white vitriol | zinc sulfate heptahydrate | 7446-20-0
+C6H12O6 | !葡萄糖 | D-(+)-glucose;D-glucose anhydrous;D-葡萄糖;无水葡萄糖;右旋糖;D-(+)-葡萄糖;glucose;D-glucose;dextrose;anhydrous glucose;dextrose anhydrous | D-glucose | 50-99-7
+C4H11NO3 | Tris | Trizma base;Trizma;三羟甲基氨基甲烷;三(羟甲基)氨基甲烷;三（羟甲基）氨基甲烷;氨丁三醇;缓血酸胺;Tris碱;Tris base;THAM;tromethamine;trometamol;tris(hydroxymethyl)aminomethane | tris(hydroxymethyl)aminomethane | 77-86-1
+C10H14N2Na2O8·2H2O | EDTA 二钠 | ethylenediaminetetraacetic acid disodium salt dihydrate;ethylenediaminetetraacetic acid disodium salt;EDTA disodium salt;edetate disodium;EDTA二钠;EDTA-2Na;EDTA-Na2;EDTA二钠盐;乙二胺四乙酸二钠;乙二胺四乙酸二钠盐;乙二胺四乙酸二钠二水合物;二水合乙二胺四乙酸二钠;依地酸二钠;Na2EDTA;disodium EDTA;EDTA disodium salt dihydrate;disodium edetate dihydrate | disodium EDTA dihydrate | 6381-92-6
+Pb(NO3)2 | 硝酸铅 | lead nitrate;lead(II) nitrate | lead(II) nitrate | 10099-74-8
+Na2SO3 | 亚硫酸钠 | 无水亚硫酸钠;sodium sulfite;sodium sulphite | sodium sulfite | 7757-83-7
+Na2S | 硫化钠 | 无水硫化钠;臭碱;sodium sulfide;sodium sulphide | sodium sulfide | 1313-82-2
+K2CrO4 | 铬酸钾 | potassium chromate | potassium chromate | 7789-00-6
+Na2C2O4 | 草酸钠 | 乙二酸钠;sodium oxalate | sodium oxalate | 62-76-0
+H2C2O4·2H2O | 二水草酸 | 二水合草酸;草酸二水合物;乙二酸二水合物;草酸（二水）;oxalic acid dihydrate | oxalic acid dihydrate | 6153-56-6
+KSCN | 硫氰酸钾 | 硫氰化钾;potassium thiocyanate | potassium thiocyanate | 333-20-0
+KNO3 | 硝酸钾 | 硝石;火硝;钾硝;potassium nitrate;saltpeter | potassium nitrate | 7757-79-1
+NaNO3 | 硝酸钠 | 智利硝石;钠硝;sodium nitrate | sodium nitrate | 7631-99-4
+Ca(NO3)2 | 硝酸钙 | 无水硝酸钙;calcium nitrate | calcium nitrate | 10124-37-5
+CaCO3 | 碳酸钙 | 轻质碳酸钙;重质碳酸钙;石灰石粉;calcium carbonate | calcium carbonate | 471-34-1
+C6H8O7 | 柠檬酸 | 无水柠檬酸;枸橼酸;无水枸橼酸;柠檬酸（无水）;citric acid;citric acid anhydrous | citric acid | 77-92-9
+C6H5Na3O7·2H2O | 二水柠檬酸钠 | citric acid trisodium salt dihydrate;柠檬酸钠;柠檬酸三钠;二水合柠檬酸三钠;柠檬酸三钠二水合物;二水柠檬酸三钠;枸橼酸钠;柠檬酸钠（二水）;sodium citrate;trisodium citrate dihydrate;sodium citrate dihydrate;sodium citrate tribasic dihydrate | trisodium citrate dihydrate | 6132-04-3
+
+# ---------------------------------------------------------------- acids
+HClO4 | 高氯酸 | 过氯酸;perchloric acid | perchloric acid | 7601-90-3 | L | 70 | 70-72 | =
+HBr | 氢溴酸 | 溴化氢溶液;hydrobromic acid | hydrobromic acid | 10035-10-6 | L | 47 | 40-48 | =
+HI | 氢碘酸 | 碘化氢溶液;hydriodic acid;hydroiodic acid | hydriodic acid | 10034-85-2 | L | 47 | 45-57 | =
+HF | 氢氟酸 | 氟化氢溶液;hydrofluoric acid | hydrofluoric acid | 7664-39-3 | L | 40 | 40-42 | =
+HCOOH | 甲酸 | 蚁酸;formic acid;methanoic acid | formic acid | 64-18-6 | L | 88 | 88-90 | =
+H2C2O4 | 草酸 | 乙二酸;无水草酸;oxalic acid;ethanedioic acid | oxalic acid | 144-62-7
+H3BO3 | 硼酸 | 正硼酸;boric acid;orthoboric acid | boric acid | 10043-35-3
+C6H8O7·H2O | 一水柠檬酸 | 一水合柠檬酸;柠檬酸一水合物;一水枸橼酸;柠檬酸（一水）;citric acid monohydrate | citric acid monohydrate | 5949-29-1
+C4H6O6 | 酒石酸 | L-酒石酸;L-(+)-酒石酸;右旋酒石酸;tartaric acid;L-tartaric acid | L-(+)-tartaric acid | 87-69-4
+C4H6O5 | 苹果酸 | DL-苹果酸;羟基丁二酸;malic acid;DL-malic acid | DL-malic acid | 6915-15-7
+C4H4O4 | 马来酸 | 顺丁烯二酸;失水苹果酸;maleic acid | maleic acid | 110-16-7
+C4H4O4 | 富马酸 | 反丁烯二酸;延胡索酸;fumaric acid | fumaric acid | 110-17-8
+C4H6O4 | 琥珀酸 | 丁二酸;succinic acid;butanedioic acid | succinic acid | 110-15-6
+CH3CH(OH)COOH | 乳酸 | DL-乳酸;2-羟基丙酸;lactic acid;DL-lactic acid | lactic acid | 50-21-5 | L | 88 | 85-90 | 1.21
+C6H5COOH | 苯甲酸 | 安息香酸;benzoic acid | benzoic acid | 65-85-0
+HOC6H4COOH | 水杨酸 | 邻羟基苯甲酸;柳酸;salicylic acid | salicylic acid | 69-72-7
+C9H8O4 | 乙酰水杨酸 | 阿司匹林;aspirin;acetylsalicylic acid | acetylsalicylic acid | 50-78-2
+C8H6O4 | 邻苯二甲酸 | 酞酸;phthalic acid | phthalic acid | 88-99-3
+KHC8H4O4 | 邻苯二甲酸氢钾 | 苯二甲酸氢钾;KHP;potassium hydrogen phthalate;potassium biphthalate | potassium hydrogen phthalate | 877-24-7
+CCl3COOH | 三氯乙酸 | TCA;trichloroacetic acid | trichloroacetic acid | 76-03-9
+CF3COOH | 三氟乙酸 | TFA;trifluoroacetic acid | trifluoroacetic acid | 76-05-1 | L | 99 | 99-100 | 1.489
+ClCH2COOH | 氯乙酸 | 一氯乙酸;chloroacetic acid;monochloroacetic acid | chloroacetic acid | 79-11-8
+NH2SO3H | 氨基磺酸 | 氨基硫酸;sulfamic acid;amidosulfonic acid | sulfamic acid | 5329-14-6
+H5IO6 | 高碘酸 | 正高碘酸;periodic acid;orthoperiodic acid | periodic acid | 10450-60-9
+C6H8O6 | 抗坏血酸 | 维生素C;维C;VC;L-抗坏血酸;丙种维生素;ascorbic acid;L-ascorbic acid;vitamin C | L-ascorbic acid | 50-81-7
+C10H16N2O8 | 乙二胺四乙酸 | EDTA free acid;EDTA;依地酸;EDTA酸;edetic acid;ethylenediaminetetraacetic acid | ethylenediaminetetraacetic acid | 60-00-4
+C14H24N2O10 | EGTA | 乙二醇双(2-氨基乙基醚)四乙酸;乙二醇双（2-氨基乙基醚）四乙酸;egtazic acid | EGTA | 67-42-5
+C7H6O6S·2H2O | 磺基水杨酸 | 5-磺基水杨酸;二水合5-磺基水杨酸;5-磺基水杨酸二水合物;sulfosalicylic acid;5-sulfosalicylic acid dihydrate | 5-sulfosalicylic acid dihydrate | 5965-83-3
+C6H3N3O7 | 苦味酸 | 2,4,6-三硝基苯酚;picric acid | picric acid | 88-89-1
+C76H52O46 | 鞣酸 | 单宁酸;单宁;tannic acid | tannic acid | 1401-55-4
+
+# ---------------------------------------------------------------- bases
+NH3 | 氨水 | 浓氨水;氢氧化铵;氨溶液;阿摩尼亚水;ammonia solution;ammonium hydroxide;aqueous ammonia;ammonia water | ammonia solution | 1336-21-6 | L | 25 | 25-28 | = | f 为溶质 NH3，w 为 NH3 质量分数（标签“含量 25%~28%”即 NH3 含量）
+Ca(OH)2 | 氢氧化钙 | 熟石灰;消石灰;石灰乳;calcium hydroxide;slaked lime;hydrated lime | calcium hydroxide | 1305-62-0
+CaO | 氧化钙 | 生石灰;石灰;calcium oxide;quicklime | calcium oxide | 1305-78-8
+Ba(OH)2 | 氢氧化钡 | 无水氢氧化钡;barium hydroxide | barium hydroxide | 17194-00-2
+Ba(OH)2·8H2O | 八水氢氧化钡 | 八水合氢氧化钡;氢氧化钡八水合物;氢氧化钡（八水）;barium hydroxide octahydrate | barium hydroxide octahydrate | 12230-71-6
+LiOH | 氢氧化锂 | 无水氢氧化锂;lithium hydroxide | lithium hydroxide | 1310-65-2
+LiOH·H2O | 一水氢氧化锂 | 一水合氢氧化锂;氢氧化锂一水合物;lithium hydroxide monohydrate | lithium hydroxide monohydrate | 1310-66-3
+Mg(OH)2 | 氢氧化镁 | magnesium hydroxide | magnesium hydroxide | 1309-42-8
+Al(OH)3 | 氢氧化铝 | aluminium hydroxide;aluminum hydroxide | aluminium hydroxide | 21645-51-2
+(C2H5)3N | 三乙胺 | TEA;triethylamine;Et3N | triethylamine | 121-44-8 | L | 99 | 99-100 | 0.728
+C5H5N | 吡啶 | 氮苯;pyridine | pyridine | 110-86-1 | L | 99.5 | 99.5-100 | 0.982
+(HOCH2CH2)3N | 三乙醇胺 | 2,2',2''-次氮基三乙醇;triethanolamine;TEOA | triethanolamine | 102-71-6 | L | 99 | 98-100 | 1.124
+HOCH2CH2NH2 | 乙醇胺 | 单乙醇胺;2-氨基乙醇;ethanolamine;monoethanolamine | ethanolamine | 141-43-5 | L | 99 | 99-100 | 1.018
+H2NCH2CH2NH2 | 乙二胺 | 1,2-乙二胺;ethylenediamine | ethylenediamine | 107-15-3 | L | 99 | 99-100 | 0.899
+
+# ---------------------------------------------------------------- chlorides
+CaCl2·6H2O | 六水氯化钙 | 六水合氯化钙;氯化钙六水合物;calcium chloride hexahydrate | calcium chloride hexahydrate | 7774-34-7
+FeCl2·4H2O | 四水氯化亚铁 | 四水合氯化亚铁;氯化亚铁;氯化亚铁四水合物;ferrous chloride tetrahydrate;iron(II) chloride tetrahydrate | iron(II) chloride tetrahydrate | 13478-10-9
+CuCl2 | 氯化铜 | 无水氯化铜;氯化铜(II);copper(II) chloride;cupric chloride | copper(II) chloride | 7447-39-4
+CuCl2·2H2O | 二水氯化铜 | 二水合氯化铜;氯化铜二水合物;copper(II) chloride dihydrate;cupric chloride dihydrate | copper(II) chloride dihydrate | 10125-13-0
+CuCl | 氯化亚铜 | copper(I) chloride;cuprous chloride | copper(I) chloride | 7758-89-6
+ZnCl2 | 氯化锌 | zinc chloride | zinc chloride | 7646-85-7
+AlCl3 | 氯化铝 | 无水氯化铝;三氯化铝;aluminium chloride;aluminum chloride | aluminium chloride | 7446-70-0
+AlCl3·6H2O | 六水氯化铝 | 六水合氯化铝;结晶氯化铝;aluminium chloride hexahydrate;aluminum chloride hexahydrate | aluminium chloride hexahydrate | 7784-13-6
+CoCl2 | 氯化钴 | 无水氯化钴;氯化钴(II);cobalt(II) chloride;cobalt chloride | cobalt(II) chloride | 7646-79-9
+CoCl2·6H2O | 六水氯化钴 | 六水合氯化钴;氯化钴六水合物;cobalt(II) chloride hexahydrate;cobalt chloride hexahydrate | cobalt(II) chloride hexahydrate | 7791-13-1
+NiCl2·6H2O | 六水氯化镍 | 六水合氯化镍;氯化镍;nickel(II) chloride hexahydrate;nickel chloride hexahydrate | nickel(II) chloride hexahydrate | 7791-20-0
+MnCl2·4H2O | 四水氯化锰 | 四水合氯化锰;氯化锰;manganese(II) chloride tetrahydrate;manganese chloride tetrahydrate | manganese(II) chloride tetrahydrate | 13446-34-9
+SnCl2·2H2O | 二水氯化亚锡 | 二水合氯化亚锡;氯化亚锡;tin(II) chloride dihydrate;stannous chloride dihydrate | tin(II) chloride dihydrate | 10025-69-1
+SnCl4 | 四氯化锡 | 氯化锡;tin(IV) chloride;stannic chloride | tin(IV) chloride | 7646-78-8 | L | 99 | 99-100 | 2.226
+HgCl2 | 氯化汞 | 升汞;氯化高汞;mercury(II) chloride;mercuric chloride | mercury(II) chloride | 7487-94-7
+Hg2Cl2 | 氯化亚汞 | 甘汞;mercury(I) chloride;mercurous chloride;calomel | mercury(I) chloride | 10112-91-1
+LiCl | 氯化锂 | lithium chloride | lithium chloride | 7447-41-8
+CsCl | 氯化铯 | caesium chloride;cesium chloride | caesium chloride | 7647-17-8
+SrCl2·6H2O | 六水氯化锶 | 六水合氯化锶;氯化锶;strontium chloride hexahydrate | strontium chloride hexahydrate | 10025-70-4
+CrCl3·6H2O | 六水氯化铬 | 六水合氯化铬;三氯化铬;chromium(III) chloride hexahydrate | chromium(III) chloride hexahydrate | 10060-12-5
+HAuCl4·4H2O | 氯金酸 | 四水合氯金酸;四水氯金酸;四氯金酸;氯金酸四水合物;chloroauric acid;tetrachloroauric acid tetrahydrate | tetrachloroauric(III) acid tetrahydrate | 16903-35-8
+HAuCl4·3H2O | 三水合氯金酸 | 三水氯金酸;氯金酸三水合物;gold(III) chloride trihydrate;hydrogen tetrachloroaurate(III) trihydrate | hydrogen tetrachloroaurate(III) trihydrate | 16961-25-4
+H2PtCl6·6H2O | 氯铂酸 | 六水合氯铂酸;六氯铂酸;chloroplatinic acid;chloroplatinic acid hexahydrate | chloroplatinic acid hexahydrate | 18497-13-7
+PdCl2 | 氯化钯 | palladium(II) chloride;palladium chloride | palladium(II) chloride | 7647-10-1
+SbCl3 | 三氯化锑 | 氯化锑;antimony trichloride;antimony(III) chloride | antimony(III) chloride | 10025-91-9
+TiCl4 | 四氯化钛 | titanium tetrachloride;titanium(IV) chloride | titanium(IV) chloride | 7550-45-0 | L | 99 | 99-100 | 1.726
+SOCl2 | 氯化亚砜 | 亚硫酰氯;二氯亚砜;thionyl chloride | thionyl chloride | 7719-09-7 | L | 99 | 99-100 | 1.638
+AgCl | 氯化银 | silver chloride | silver chloride | 7783-90-6
+
+# ---------------------------------------------------------------- bromides, iodides, fluorides, halogens
+NaBr | 溴化钠 | sodium bromide | sodium bromide | 7647-15-6
+LiBr | 溴化锂 | lithium bromide | lithium bromide | 7550-35-8
+NaI | 碘化钠 | sodium iodide | sodium iodide | 7681-82-5
+I2 | 碘 | 碘单质;碘片;iodine | iodine | 7553-56-2
+Br2 | 溴 | 液溴;溴素;bromine | bromine | 7726-95-6 | L | 99.5 | 99.5-100 | 3.103
+KIO3 | 碘酸钾 | potassium iodate | potassium iodate | 7758-05-6
+KBrO3 | 溴酸钾 | potassium bromate | potassium bromate | 7758-01-2
+NaF | 氟化钠 | sodium fluoride | sodium fluoride | 7681-49-4
+KF | 氟化钾 | potassium fluoride | potassium fluoride | 7789-23-3
+NH4F | 氟化铵 | ammonium fluoride | ammonium fluoride | 12125-01-8
+CaF2 | 氟化钙 | 萤石;氟石;calcium fluoride;fluorite | calcium fluoride | 7789-75-5
+
+# ---------------------------------------------------------------- sulfates, sulfites, thiosulfates, persulfates
+Na2SO4·10H2O | 十水硫酸钠 | 芒硝;格劳伯盐;朴硝;十水合硫酸钠;硫酸钠十水合物;硫酸钠（十水）;Glauber's salt;sodium sulfate decahydrate | sodium sulfate decahydrate | 7727-73-3
+K2SO4 | 硫酸钾 | potassium sulfate;potassium sulphate | potassium sulfate | 7778-80-5
+MgSO4 | 硫酸镁 | 无水硫酸镁;硫酸镁（无水）;magnesium sulfate;magnesium sulfate anhydrous | magnesium sulfate | 7487-88-9
+CaSO4·2H2O | 二水硫酸钙 | 石膏;生石膏;二水合硫酸钙;硫酸钙二水合物;gypsum;calcium sulfate dihydrate | calcium sulfate dihydrate | 10101-41-4
+CaSO4 | 硫酸钙 | 无水硫酸钙;无水石膏;calcium sulfate;anhydrite | calcium sulfate | 7778-18-9
+FeSO4 | 硫酸亚铁 | 无水硫酸亚铁;iron(II) sulfate;ferrous sulfate | iron(II) sulfate | 7720-78-7
+Fe2(SO4)3 | 硫酸铁 | 硫酸高铁;iron(III) sulfate;ferric sulfate | iron(III) sulfate | 10028-22-5
+(NH4)2Fe(SO4)2·6H2O | 硫酸亚铁铵 | 莫尔盐;摩尔盐;六水合硫酸亚铁铵;六水硫酸亚铁铵;硫酸亚铁铵六水合物;Mohr's salt;ammonium iron(II) sulfate hexahydrate;ferrous ammonium sulfate | ammonium iron(II) sulfate hexahydrate | 7783-85-9
+NH4Fe(SO4)2·12H2O | 硫酸铁铵 | 铁铵矾;十二水合硫酸铁铵;十二水硫酸铁铵;硫酸高铁铵;ammonium iron(III) sulfate dodecahydrate;ferric ammonium sulfate;iron alum | ammonium iron(III) sulfate dodecahydrate | 7783-83-7
+ZnSO4 | 硫酸锌 | 无水硫酸锌;zinc sulfate;zinc sulphate | zinc sulfate | 7733-02-0
+ZnSO4·H2O | 一水硫酸锌 | 一水合硫酸锌;硫酸锌一水合物;zinc sulfate monohydrate | zinc sulfate monohydrate | 7446-19-7
+MnSO4 | 硫酸锰 | 无水硫酸锰;manganese(II) sulfate;manganese sulfate | manganese(II) sulfate | 7785-87-7
+MnSO4·H2O | 一水硫酸锰 | 一水合硫酸锰;硫酸锰一水合物;manganese(II) sulfate monohydrate | manganese(II) sulfate monohydrate | 10034-96-5
+Al2(SO4)3 | 硫酸铝 | 无水硫酸铝;aluminium sulfate;aluminum sulfate | aluminium sulfate | 10043-01-3
+Al2(SO4)3·18H2O | 十八水硫酸铝 | 十八水合硫酸铝;硫酸铝十八水合物;aluminium sulfate octadecahydrate;aluminum sulfate octadecahydrate | aluminium sulfate octadecahydrate | 7784-31-8
+KAl(SO4)2·12H2O | 十二水硫酸铝钾 | 明矾;白矾;钾明矾;钾矾;硫酸铝钾;十二水合硫酸铝钾;potash alum;alum;aluminium potassium sulfate dodecahydrate;potassium aluminum sulfate dodecahydrate | aluminium potassium sulfate dodecahydrate | 7784-24-9
+NH4Al(SO4)2·12H2O | 硫酸铝铵 | 铵明矾;铵矾;十二水合硫酸铝铵;十二水硫酸铝铵;ammonium alum;ammonium aluminium sulfate dodecahydrate | ammonium aluminium sulfate dodecahydrate | 7784-26-1
+KCr(SO4)2·12H2O | 硫酸铬钾 | 铬钾矾;铬矾;十二水合硫酸铬钾;chrome alum;chromium(III) potassium sulfate dodecahydrate | chromium(III) potassium sulfate dodecahydrate | 7788-99-0
+NiSO4·6H2O | 六水硫酸镍 | 六水合硫酸镍;硫酸镍;nickel(II) sulfate hexahydrate;nickel sulfate hexahydrate | nickel(II) sulfate hexahydrate | 10101-97-0
+CoSO4·7H2O | 七水硫酸钴 | 七水合硫酸钴;硫酸钴;cobalt(II) sulfate heptahydrate | cobalt(II) sulfate heptahydrate | 10026-24-1
+Li2SO4·H2O | 一水硫酸锂 | 一水合硫酸锂;硫酸锂;lithium sulfate monohydrate | lithium sulfate monohydrate | 10102-25-7
+Ag2SO4 | 硫酸银 | silver sulfate | silver sulfate | 10294-26-5
+HgSO4 | 硫酸汞 | 硫酸高汞;mercury(II) sulfate;mercuric sulfate | mercury(II) sulfate | 7783-35-9
+BaSO4 | 硫酸钡 | 重晶石;钡白;沉淀硫酸钡;barium sulfate;barite | barium sulfate | 7727-43-7
+Ce(SO4)2·4H2O | 硫酸铈 | 四水合硫酸铈;硫酸高铈;cerium(IV) sulfate tetrahydrate;ceric sulfate | cerium(IV) sulfate tetrahydrate | 10294-42-5
+(NH4)4Ce(SO4)4·2H2O | 硫酸铈铵 | 硫酸高铈铵;二水合硫酸铈铵;ammonium cerium(IV) sulfate dihydrate;ceric ammonium sulfate | ammonium cerium(IV) sulfate dihydrate | 10378-47-9
+(NH4)2Ce(NO3)6 | 硝酸铈铵 | 硝酸高铈铵;CAN;ammonium cerium(IV) nitrate;ceric ammonium nitrate | ammonium cerium(IV) nitrate | 16774-21-3
+KHSO4 | 硫酸氢钾 | 酸式硫酸钾;potassium bisulfate;potassium hydrogen sulfate | potassium hydrogen sulfate | 7646-93-7
+NaHSO4 | 硫酸氢钠 | 酸式硫酸钠;sodium bisulfate;sodium hydrogen sulfate | sodium hydrogen sulfate | 7681-38-1
+K2S2O8 | 过硫酸钾 | 过二硫酸钾;potassium persulfate;potassium peroxodisulfate | potassium persulfate | 7727-21-1
+(NH4)2S2O8 | 过硫酸铵 | 过二硫酸铵;APS;ammonium persulfate;ammonium peroxodisulfate | ammonium persulfate | 7727-54-0
+Na2S2O8 | 过硫酸钠 | 过二硫酸钠;sodium persulfate | sodium persulfate | 7775-27-1
+Na2S2O5 | 焦亚硫酸钠 | 偏重亚硫酸钠;sodium metabisulfite;sodium pyrosulfite | sodium metabisulfite | 7681-57-4
+NaHSO3 | 亚硫酸氢钠 | 酸式亚硫酸钠;重亚硫酸钠;sodium bisulfite;sodium hydrogen sulfite | sodium bisulfite | 7631-90-5
+Na2S2O4 | 连二亚硫酸钠 | 保险粉;低亚硫酸钠;sodium dithionite;sodium hydrosulfite | sodium dithionite | 7775-14-6
+Na2S2O3 | 硫代硫酸钠 | 无水硫代硫酸钠;sodium thiosulfate;sodium thiosulfate anhydrous | sodium thiosulfate | 7772-98-7
+Na2S·9H2O | 九水硫化钠 | 九水合硫化钠;硫化钠九水合物;硫化钠（九水）;sodium sulfide nonahydrate | sodium sulfide nonahydrate | 1313-84-4
+S | 硫 | 硫磺;硫黄;升华硫;sulfur;sulphur | sulfur | 7704-34-9
+
+# ---------------------------------------------------------------- nitrates, nitrites, azides
+Ca(NO3)2·4H2O | 四水硝酸钙 | 四水合硝酸钙;硝酸钙四水合物;calcium nitrate tetrahydrate | calcium nitrate tetrahydrate | 13477-34-4
+Mg(NO3)2·6H2O | 六水硝酸镁 | 六水合硝酸镁;硝酸镁;magnesium nitrate hexahydrate | magnesium nitrate hexahydrate | 13446-18-9
+Cu(NO3)2·3H2O | 三水硝酸铜 | 三水合硝酸铜;硝酸铜;copper(II) nitrate trihydrate | copper(II) nitrate trihydrate | 10031-43-3
+Zn(NO3)2·6H2O | 六水硝酸锌 | 六水合硝酸锌;硝酸锌;zinc nitrate hexahydrate | zinc nitrate hexahydrate | 10196-18-6
+Fe(NO3)3·9H2O | 九水硝酸铁 | 九水合硝酸铁;硝酸铁;iron(III) nitrate nonahydrate;ferric nitrate nonahydrate | iron(III) nitrate nonahydrate | 7782-61-8
+Al(NO3)3·9H2O | 九水硝酸铝 | 九水合硝酸铝;硝酸铝;aluminium nitrate nonahydrate;aluminum nitrate nonahydrate | aluminium nitrate nonahydrate | 7784-27-2
+Co(NO3)2·6H2O | 六水硝酸钴 | 六水合硝酸钴;硝酸钴;cobalt(II) nitrate hexahydrate | cobalt(II) nitrate hexahydrate | 10026-22-9
+Ni(NO3)2·6H2O | 六水硝酸镍 | 六水合硝酸镍;硝酸镍;nickel(II) nitrate hexahydrate | nickel(II) nitrate hexahydrate | 13478-00-7
+Cr(NO3)3·9H2O | 九水硝酸铬 | 九水合硝酸铬;硝酸铬;chromium(III) nitrate nonahydrate | chromium(III) nitrate nonahydrate | 7789-02-8
+Bi(NO3)3·5H2O | 五水硝酸铋 | 五水合硝酸铋;硝酸铋;bismuth(III) nitrate pentahydrate | bismuth(III) nitrate pentahydrate | 10035-06-0
+NH4NO3 | 硝酸铵 | 硝铵;ammonium nitrate | ammonium nitrate | 6484-52-2
+Ba(NO3)2 | 硝酸钡 | barium nitrate | barium nitrate | 10022-31-8
+Sr(NO3)2 | 硝酸锶 | strontium nitrate | strontium nitrate | 10042-76-9
+LiNO3 | 硝酸锂 | lithium nitrate | lithium nitrate | 7790-69-4
+NaNO2 | 亚硝酸钠 | sodium nitrite | sodium nitrite | 7632-00-0
+KNO2 | 亚硝酸钾 | potassium nitrite | potassium nitrite | 7758-09-0
+NaN3 | 叠氮化钠 | 叠氮钠;sodium azide | sodium azide | 26628-22-8
+
+# ---------------------------------------------------------------- carbonates
+Na2CO3·10H2O | 十水碳酸钠 | 晶碱;洗涤碱;十水合碳酸钠;碳酸钠十水合物;washing soda;sodium carbonate decahydrate | sodium carbonate decahydrate | 6132-02-1
+K2CO3 | 碳酸钾 | 钾碱;无水碳酸钾;potassium carbonate;potash | potassium carbonate | 584-08-7
+KHCO3 | 碳酸氢钾 | 重碳酸钾;酸式碳酸钾;potassium bicarbonate;potassium hydrogen carbonate | potassium bicarbonate | 298-14-6
+(NH4)2CO3 | 碳酸铵 | ammonium carbonate | ammonium carbonate | 506-87-6
+NH4HCO3 | 碳酸氢铵 | 碳铵;重碳酸铵;ammonium bicarbonate;ammonium hydrogen carbonate | ammonium bicarbonate | 1066-33-7
+MgCO3 | 碳酸镁 | magnesium carbonate | magnesium carbonate | 546-93-0
+BaCO3 | 碳酸钡 | barium carbonate | barium carbonate | 513-77-9
+Li2CO3 | 碳酸锂 | lithium carbonate | lithium carbonate | 554-13-2
+Cs2CO3 | 碳酸铯 | caesium carbonate;cesium carbonate | caesium carbonate | 534-17-8
+Cu2(OH)2CO3 | 碱式碳酸铜 | 铜绿;孔雀石;basic copper carbonate;copper(II) carbonate hydroxide | basic copper carbonate | 12069-69-1
+
+# ---------------------------------------------------------------- phosphates
+Na2HPO4·2H2O | 二水磷酸氢二钠 | 二水合磷酸氢二钠;磷酸氢二钠二水合物;磷酸氢二钠（二水）;disodium hydrogen phosphate dihydrate;sodium phosphate dibasic dihydrate | disodium hydrogen phosphate dihydrate | 10028-24-7
+Na2HPO4·7H2O | 七水磷酸氢二钠 | 七水合磷酸氢二钠;磷酸氢二钠七水合物;磷酸氢二钠（七水）;disodium hydrogen phosphate heptahydrate;sodium phosphate dibasic heptahydrate | disodium hydrogen phosphate heptahydrate | 7782-85-6
+NaH2PO4·H2O | 一水磷酸二氢钠 | 一水合磷酸二氢钠;磷酸二氢钠一水合物;磷酸二氢钠（一水）;sodium dihydrogen phosphate monohydrate;sodium phosphate monobasic monohydrate | sodium dihydrogen phosphate monohydrate | 10049-21-5
+K2HPO4·3H2O | 三水磷酸氢二钾 | 三水合磷酸氢二钾;磷酸氢二钾三水合物;磷酸氢二钾（三水）;dipotassium hydrogen phosphate trihydrate;potassium phosphate dibasic trihydrate | dipotassium hydrogen phosphate trihydrate | 16788-57-1
+Na3PO4 | 磷酸钠 | 磷酸三钠;无水磷酸钠;trisodium phosphate;sodium phosphate tribasic | trisodium phosphate | 7601-54-9
+Na3PO4·12H2O | 十二水磷酸钠 | 十二水合磷酸钠;十二水磷酸三钠;磷酸三钠十二水合物;trisodium phosphate dodecahydrate | trisodium phosphate dodecahydrate | 10101-89-0
+K3PO4 | 磷酸钾 | 磷酸三钾;tripotassium phosphate;potassium phosphate tribasic | tripotassium phosphate | 7778-53-2
+(NH4)2HPO4 | 磷酸氢二铵 | 磷酸二铵;diammonium phosphate;diammonium hydrogen phosphate | diammonium hydrogen phosphate | 7783-28-0
+NH4H2PO4 | 磷酸二氢铵 | 磷酸一铵;ammonium dihydrogen phosphate;monoammonium phosphate | ammonium dihydrogen phosphate | 7722-76-1
+Na4P2O7 | 焦磷酸钠 | 无水焦磷酸钠;焦磷酸四钠;tetrasodium pyrophosphate;sodium pyrophosphate | tetrasodium pyrophosphate | 7722-88-5
+Na4P2O7·10H2O | 十水焦磷酸钠 | 十水合焦磷酸钠;焦磷酸钠十水合物;sodium pyrophosphate decahydrate | tetrasodium pyrophosphate decahydrate | 13472-36-1
+(NaPO3)6 | 六偏磷酸钠 | 偏磷酸钠;sodium hexametaphosphate | sodium hexametaphosphate | 10124-56-8
+Na5P3O10 | 三聚磷酸钠 | 三磷酸五钠;sodium tripolyphosphate;pentasodium triphosphate | sodium tripolyphosphate | 7758-29-4
+Ca3(PO4)2 | 磷酸钙 | 磷酸三钙;tricalcium phosphate;calcium phosphate | tricalcium phosphate | 7758-87-4
+CaHPO4·2H2O | 磷酸氢钙 | 二水磷酸氢钙;二水合磷酸氢钙;calcium hydrogen phosphate dihydrate;dicalcium phosphate dihydrate | calcium hydrogen phosphate dihydrate | 7789-77-7
+C3H7Na2O6P·5H2O | β-甘油磷酸钠 | β-甘油磷酸二钠;甘油磷酸钠;β-甘油磷酸钠五水合物;sodium β-glycerophosphate;beta-glycerophosphate disodium salt pentahydrate | sodium β-glycerophosphate pentahydrate | 13408-09-8
+
+# ---------------------------------------------------------------- acetates, oxalates, tartrates, citrates & other organic salts
+CH3COOK | 乙酸钾 | 醋酸钾;potassium acetate | potassium acetate | 127-08-2
+CH3COONH4 | 乙酸铵 | 醋酸铵;ammonium acetate | ammonium acetate | 631-61-8
+Zn(CH3COO)2·2H2O | 二水乙酸锌 | 乙酸锌;醋酸锌;二水合乙酸锌;二水合醋酸锌;zinc acetate dihydrate | zinc acetate dihydrate | 5970-45-6
+Pb(CH3COO)2·3H2O | 三水乙酸铅 | 乙酸铅;醋酸铅;铅糖;三水合乙酸铅;lead(II) acetate trihydrate;sugar of lead | lead(II) acetate trihydrate | 6080-56-4
+Cu(CH3COO)2·H2O | 一水乙酸铜 | 乙酸铜;醋酸铜;一水合乙酸铜;copper(II) acetate monohydrate | copper(II) acetate monohydrate | 6046-93-1
+Mg(CH3COO)2·4H2O | 四水乙酸镁 | 乙酸镁;醋酸镁;四水合乙酸镁;magnesium acetate tetrahydrate | magnesium acetate tetrahydrate | 16674-78-5
+Mn(CH3COO)2·4H2O | 四水乙酸锰 | 乙酸锰;醋酸锰;四水合乙酸锰;manganese(II) acetate tetrahydrate | manganese(II) acetate tetrahydrate | 6156-78-1
+Ca(CH3COO)2 | 乙酸钙 | 醋酸钙;calcium acetate | calcium acetate | 62-54-4
+HCOONa | 甲酸钠 | 蚁酸钠;sodium formate | sodium formate | 141-53-7
+HCOONH4 | 甲酸铵 | ammonium formate | ammonium formate | 540-69-2
+K2C2O4·H2O | 一水草酸钾 | 草酸钾;一水合草酸钾;potassium oxalate monohydrate | potassium oxalate monohydrate | 6487-48-5
+(NH4)2C2O4·H2O | 一水草酸铵 | 草酸铵;一水合草酸铵;ammonium oxalate monohydrate | ammonium oxalate monohydrate | 6009-70-7
+KNaC4H4O6·4H2O | 酒石酸钾钠 | 四水酒石酸钾钠;四水合酒石酸钾钠;罗谢尔盐;洛瑟尔盐;Rochelle salt;Seignette salt;potassium sodium tartrate tetrahydrate | potassium sodium tartrate tetrahydrate | 6381-59-5
+KHC4H4O6 | 酒石酸氢钾 | 酒石;potassium bitartrate;potassium hydrogen tartrate;cream of tartar | potassium hydrogen tartrate | 868-14-4
+C6H5K3O7·H2O | 柠檬酸钾 | 一水柠檬酸钾;柠檬酸三钾;一水合柠檬酸三钾;枸橼酸钾;potassium citrate;tripotassium citrate monohydrate | tripotassium citrate monohydrate | 6100-05-6
+C6H5COONa | 苯甲酸钠 | 安息香酸钠;sodium benzoate | sodium benzoate | 532-32-1
+HOC6H4COONa | 水杨酸钠 | sodium salicylate | sodium salicylate | 54-21-7
+C3H3NaO3 | 丙酮酸钠 | sodium pyruvate | sodium pyruvate | 113-24-6
+C12H22CaO14 | 葡萄糖酸钙 | calcium gluconate | calcium gluconate | 299-28-5
+C5H8NNaO4·H2O | 谷氨酸钠 | 味精;L-谷氨酸钠;L-谷氨酸钠一水合物;monosodium glutamate;MSG | monosodium L-glutamate monohydrate | 6106-04-3
+
+# ---------------------------------------------------------------- oxidizers / reductants / misc inorganic
+KClO3 | 氯酸钾 | potassium chlorate | potassium chlorate | 3811-04-9
+KClO4 | 高氯酸钾 | potassium perchlorate | potassium perchlorate | 7778-74-7
+NaClO4 | 高氯酸钠 | sodium perchlorate | sodium perchlorate | 7601-89-0
+Ca(ClO)2 | 次氯酸钙 | 漂粉精;漂白精;calcium hypochlorite | calcium hypochlorite | 7778-54-3
+NaIO4 | 高碘酸钠 | 偏高碘酸钠;sodium periodate;sodium metaperiodate | sodium periodate | 7790-28-5
+Na2O2 | 过氧化钠 | sodium peroxide | sodium peroxide | 1313-60-6
+Na2Cr2O7·2H2O | 重铬酸钠 | 红矾钠;二水合重铬酸钠;sodium dichromate dihydrate | sodium dichromate dihydrate | 7789-12-0
+CrO3 | 三氧化铬 | 铬酐;铬酸酐;chromium trioxide;chromium(VI) oxide | chromium(VI) oxide | 1333-82-0
+MnO2 | 二氧化锰 | manganese dioxide;manganese(IV) oxide | manganese dioxide | 1313-13-9
+NaBH4 | 硼氢化钠 | sodium borohydride | sodium borohydride | 16940-66-2
+LiAlH4 | 氢化铝锂 | 四氢铝锂;lithium aluminium hydride;LAH | lithium aluminium hydride | 16853-85-3
+NH2OH·HCl | 盐酸羟胺 | 羟胺盐酸盐;氯化羟胺;hydroxylamine hydrochloride | hydroxylamine hydrochloride | 5470-11-1
+N2H4·H2O | 水合肼 | 水合联氨;hydrazine hydrate;hydrazine monohydrate | hydrazine hydrate | 7803-57-8 | L | 80 | 50-85 | 1.03 | w 为水合肼(N2H4·H2O)质量分数
+N2H4·H2SO4 | 硫酸肼 | 硫酸联氨;hydrazine sulfate | hydrazine sulfate | 10034-93-2
+K3[Fe(CN)6] | 铁氰化钾 | 赤血盐;赤血盐钾;potassium ferricyanide;potassium hexacyanoferrate(III) | potassium ferricyanide | 13746-66-2
+K4[Fe(CN)6]·3H2O | 亚铁氰化钾 | 黄血盐;黄血盐钾;三水合亚铁氰化钾;potassium ferrocyanide trihydrate;potassium hexacyanoferrate(II) trihydrate | potassium ferrocyanide trihydrate | 14459-95-1
+Na2[Fe(CN)5NO]·2H2O | 亚硝基铁氰化钠 | 硝普钠;二水合亚硝基铁氰化钠;sodium nitroprusside;sodium nitroferricyanide dihydrate | sodium nitroprusside dihydrate | 13755-38-9
+NH4SCN | 硫氰酸铵 | 硫氰化铵;ammonium thiocyanate | ammonium thiocyanate | 1762-95-4
+NaSCN | 硫氰酸钠 | 硫氰化钠;sodium thiocyanate | sodium thiocyanate | 540-72-7
+KCN | 氰化钾 | potassium cyanide | potassium cyanide | 151-50-8
+NaCN | 氰化钠 | sodium cyanide | sodium cyanide | 143-33-9
+Na2B4O7·10H2O | 四硼酸钠 | 硼砂;十水四硼酸钠;十水合四硼酸钠;四硼酸钠十水合物;borax;sodium tetraborate decahydrate | sodium tetraborate decahydrate | 1303-96-4
+Na2SiO3·9H2O | 九水硅酸钠 | 硅酸钠;偏硅酸钠;九水偏硅酸钠;泡花碱;sodium metasilicate nonahydrate;sodium silicate | sodium metasilicate nonahydrate | 13517-24-3
+Na3VO4 | 原钒酸钠 | 钒酸钠;sodium orthovanadate | sodium orthovanadate | 13721-39-6
+NH4VO3 | 偏钒酸铵 | ammonium metavanadate | ammonium metavanadate | 7803-55-6
+Na2MoO4·2H2O | 钼酸钠 | 二水钼酸钠;二水合钼酸钠;sodium molybdate dihydrate | sodium molybdate dihydrate | 10102-40-6
+(NH4)6Mo7O24·4H2O | 钼酸铵 | 七钼酸铵;四水合钼酸铵;仲钼酸铵;ammonium molybdate tetrahydrate;ammonium heptamolybdate | ammonium heptamolybdate tetrahydrate | 12054-85-2
+Na2WO4·2H2O | 钨酸钠 | 二水钨酸钠;二水合钨酸钠;sodium tungstate dihydrate | sodium tungstate dihydrate | 10213-10-2
+As2O3 | 三氧化二砷 | 砒霜;亚砷酸酐;arsenic trioxide | arsenic trioxide | 1327-53-3
+
+# ---------------------------------------------------------------- oxides
+ZnO | 氧化锌 | 锌白;锌氧粉;zinc oxide | zinc oxide | 1314-13-2
+CuO | 氧化铜 | copper(II) oxide;cupric oxide | copper(II) oxide | 1317-38-0
+Cu2O | 氧化亚铜 | copper(I) oxide;cuprous oxide | copper(I) oxide | 1317-39-1
+Fe2O3 | 氧化铁 | 三氧化二铁;铁红;iron(III) oxide;ferric oxide | iron(III) oxide | 1309-37-1
+Fe3O4 | 四氧化三铁 | 磁性氧化铁;iron(II,III) oxide;magnetite | iron(II,III) oxide | 1317-61-9
+MgO | 氧化镁 | 苦土;magnesium oxide;magnesia | magnesium oxide | 1309-48-4
+Al2O3 | 氧化铝 | 三氧化二铝;aluminium oxide;aluminum oxide;alumina | aluminium oxide | 1344-28-1
+SiO2 | 二氧化硅 | 硅胶;石英;硅石;silicon dioxide;silica | silicon dioxide | 7631-86-9
+TiO2 | 二氧化钛 | 钛白粉;titanium dioxide | titanium dioxide | 13463-67-7
+PbO | 氧化铅 | 一氧化铅;密陀僧;lead(II) oxide | lead(II) oxide | 1317-36-8
+HgO | 氧化汞 | 氧化高汞;mercury(II) oxide | mercury(II) oxide | 21908-53-2
+Ag2O | 氧化银 | silver oxide;silver(I) oxide | silver(I) oxide | 20667-12-3
+V2O5 | 五氧化二钒 | vanadium pentoxide;vanadium(V) oxide | vanadium(V) oxide | 1314-62-1
+P2O5 | 五氧化二磷 | 磷酸酐;phosphorus pentoxide;phosphorus(V) oxide | phosphorus pentoxide | 1314-56-3
+
+# ---------------------------------------------------------------- elements
+Zn | 锌 | 锌粒;锌粉;锌片;zinc | zinc | 7440-66-6
+Fe | 铁 | 铁粉;还原铁粉;iron | iron | 7439-89-6
+Cu | 铜 | 铜粉;铜片;铜丝;copper | copper | 7440-50-8
+Mg | 镁 | 镁条;镁粉;magnesium | magnesium | 7439-95-4
+Al | 铝 | 铝粉;铝片;aluminium;aluminum | aluminium | 7429-90-5
+Na | 钠 | 金属钠;sodium | sodium | 7440-23-5
+Ag | 银 | silver | silver | 7440-22-4
+Sn | 锡 | 锡粒;tin | tin | 7440-31-5
+Hg | 汞 | 水银;mercury | mercury | 7439-97-6 | L | 99.99 | 99.9-100 | 13.546
+
+# ---------------------------------------------------------------- water & organic solvents (liquids)
+H2O | 水 | 纯水;蒸馏水;去离子水;超纯水;双蒸水;纯净水;ddH2O;water;distilled water;deionized water | water | 7732-18-5 | L | 100 | 100-100 | 0.9982
+CH3OH | 甲醇 | 木醇;木精;methanol;methyl alcohol | methanol | 67-56-1 | L | 99.5 | 99.5-100 | =
+C2H5OH | !乙醇 | 无水乙醇;酒精;无水酒精;医用酒精;乙醇（无水）;ethanol;ethyl alcohol;absolute ethanol;alcohol | ethanol | 64-17-5 | L | 99.7 | 99.7-100 | = | 95% 乙醇为体积分数（约 92.4% w/w，ρ≈0.812）
+(CH3)2CHOH | 异丙醇 | 2-丙醇;IPA;isopropanol;isopropyl alcohol;2-propanol | isopropanol | 67-63-0 | L | 99.7 | 99.7-100 | 0.786
+CH3CH2CH2OH | 正丙醇 | 1-丙醇;丙醇;1-propanol;n-propanol | 1-propanol | 71-23-8 | L | 99.5 | 99.5-100 | 0.804
+CH3(CH2)3OH | 正丁醇 | 1-丁醇;丁醇;1-butanol;n-butanol | 1-butanol | 71-36-3 | L | 99.5 | 99.5-100 | 0.810
+(CH3)2CHCH2CH2OH | 异戊醇 | 3-甲基-1-丁醇;isoamyl alcohol;isopentyl alcohol;3-methyl-1-butanol | isoamyl alcohol | 123-51-3 | L | 98.5 | 98.5-100 | 0.810
+CH3(CH2)7OH | 正辛醇 | 1-辛醇;辛醇;1-octanol;n-octanol | 1-octanol | 111-87-5 | L | 99 | 99-100 | 0.826
+C6H5CH2OH | 苯甲醇 | 苄醇;benzyl alcohol | benzyl alcohol | 100-51-6 | L | 99 | 99-100 | 1.045
+HOCH2CH2OH | 乙二醇 | 甘醇;ethylene glycol;ethane-1,2-diol;monoethylene glycol | ethylene glycol | 107-21-1 | L | 99 | 99-100 | =
+CH3CH(OH)CH2OH | 1,2-丙二醇 | 丙二醇;propylene glycol;1,2-propanediol | propylene glycol | 57-55-6 | L | 99 | 99-100 | 1.036
+C3H8O3 | 甘油 | 丙三醇;glycerol;glycerin;glycerine | glycerol | 56-81-5 | L | 99 | 99-100 | =
+CH3COCH3 | 丙酮 | 二甲基酮;acetone;propanone;dimethyl ketone | acetone | 67-64-1 | L | 99.5 | 99.5-100 | 0.790
+CH3COC2H5 | 丁酮 | 2-丁酮;甲乙酮;MEK;butanone;methyl ethyl ketone;2-butanone | butanone | 78-93-3 | L | 99.5 | 99.5-100 | 0.805
+C6H10O | 环己酮 | cyclohexanone | cyclohexanone | 108-94-1 | L | 99.5 | 99.5-100 | 0.947
+CH3CN | 乙腈 | 甲基氰;acetonitrile;methyl cyanide;MeCN | acetonitrile | 75-05-8 | L | 99.8 | 99.5-100 | 0.786
+CH3COOC2H5 | 乙酸乙酯 | 醋酸乙酯;ethyl acetate;EtOAc | ethyl acetate | 141-78-6 | L | 99.5 | 99.5-100 | 0.900
+CH3COO(CH2)3CH3 | 乙酸丁酯 | 乙酸正丁酯;醋酸丁酯;butyl acetate;n-butyl acetate | butyl acetate | 123-86-4 | L | 99.5 | 99-100 | 0.882
+(C2H5)2O | 乙醚 | 二乙醚;无水乙醚;diethyl ether;ether;ethyl ether | diethyl ether | 60-29-7 | L | 99.5 | 99.5-100 | 0.713
+(CH3)3COCH3 | 甲基叔丁基醚 | MTBE;methyl tert-butyl ether | methyl tert-butyl ether | 1634-04-4 | L | 99.5 | 99-100 | 0.740
+CH3(CH2)4CH3 | 正己烷 | 己烷;n-hexane;hexane | n-hexane | 110-54-3 | L | 97 | 95-100 | 0.659
+CH3(CH2)5CH3 | 正庚烷 | 庚烷;n-heptane;heptane | n-heptane | 142-82-5 | L | 99 | 98-100 | 0.684
+C6H12 | 环己烷 | 六氢化苯;cyclohexane | cyclohexane | 110-82-7 | L | 99.5 | 99.5-100 | 0.779
+C6H6 | 苯 | 纯苯;benzene | benzene | 71-43-2 | L | 99.5 | 99.5-100 | 0.877
+C6H5CH3 | 甲苯 | 甲基苯;toluene;methylbenzene | toluene | 108-88-3 | L | 99.5 | 99.5-100 | 0.867
+C6H4(CH3)2 | 二甲苯 | 混合二甲苯;xylene;xylenes;dimethylbenzene | xylene | 1330-20-7 | L | 99 | 99-100 | 0.86
+C6H5Cl | 氯苯 | 一氯苯;chlorobenzene | chlorobenzene | 108-90-7 | L | 99.5 | 99.5-100 | 1.106
+C6H5NO2 | 硝基苯 | 密斑油;nitrobenzene | nitrobenzene | 98-95-3 | L | 99 | 99-100 | 1.204
+C6H5NH2 | 苯胺 | 阿尼林;aniline;aminobenzene | aniline | 62-53-3 | L | 99.5 | 99.5-100 | 1.022
+CH2Cl2 | 二氯甲烷 | DCM;dichloromethane;methylene chloride | dichloromethane | 75-09-2 | L | 99.5 | 99.5-100 | 1.326
+CHCl3 | 三氯甲烷 | 氯仿;chloroform;trichloromethane | chloroform | 67-66-3 | L | 99 | 99-100 | 1.48 | 通常含 0.3%–1% 乙醇作稳定剂
+CCl4 | 四氯化碳 | 四氯甲烷;carbon tetrachloride;tetrachloromethane | carbon tetrachloride | 56-23-5 | L | 99.5 | 99.5-100 | 1.594
+ClCH2CH2Cl | 1,2-二氯乙烷 | 二氯乙烷;1,2-dichloroethane;ethylene dichloride | 1,2-dichloroethane | 107-06-2 | L | 99 | 99-100 | 1.253
+(CH3)2SO | 二甲基亚砜 | DMSO;dimethyl sulfoxide;dimethyl sulphoxide | dimethyl sulfoxide | 67-68-5 | L | 99.5 | 99.5-100 | 1.100
+HCON(CH3)2 | N,N-二甲基甲酰胺 | 二甲基甲酰胺;DMF;dimethylformamide;N,N-dimethylformamide | N,N-dimethylformamide | 68-12-2 | L | 99.5 | 99.5-100 | 0.949
+CH3CON(CH3)2 | N,N-二甲基乙酰胺 | 二甲基乙酰胺;DMAc;DMA;dimethylacetamide;N,N-dimethylacetamide | N,N-dimethylacetamide | 127-19-5 | L | 99.5 | 99-100 | 0.942
+C5H9NO | N-甲基吡咯烷酮 | NMP;N-甲基-2-吡咯烷酮;N-methyl-2-pyrrolidone | N-methyl-2-pyrrolidone | 872-50-4 | L | 99.5 | 99-100 | 1.032
+C4H8O | 四氢呋喃 | THF;tetrahydrofuran;oxolane | tetrahydrofuran | 109-99-9 | L | 99.5 | 99.5-100 | 0.889
+C4H8O2 | 1,4-二氧六环 | 二氧六环;1,4-二噁烷;二噁烷;1,4-dioxane;dioxane | 1,4-dioxane | 123-91-1 | L | 99.5 | 99-100 | 1.034
+(CH3CO)2O | 乙酸酐 | 醋酸酐;醋酐;acetic anhydride | acetic anhydride | 108-24-7 | L | 98.5 | 98.5-100 | 1.082
+CS2 | 二硫化碳 | carbon disulfide | carbon disulfide | 75-15-0 | L | 99.5 | 99-100 | 1.263
+HCONH2 | 甲酰胺 | formamide;methanamide | formamide | 75-12-7 | L | 99.5 | 99-100 | 1.133
+C6H5CHO | 苯甲醛 | 苦杏仁油;benzaldehyde | benzaldehyde | 100-52-7 | L | 98.5 | 98.5-100 | 1.044
+HCHO | 甲醛 | 甲醛溶液;福尔马林;甲醛水溶液;formaldehyde;formalin;formaldehyde solution | formaldehyde | 50-00-0 | L | 37 | 37-40 | 1.09 | 市售甲醛溶液常含约 10%–15% 甲醇作稳定剂，实际密度约 1.08–1.09
+C5H8O2 | 戊二醛 | 戊二醛溶液;glutaraldehyde;glutaric dialdehyde;glutaraldehyde solution | glutaraldehyde | 111-30-8 | L | 25 | 25-25 | 1.06 | 常见规格 25%（ρ≈1.06）和 50%（ρ≈1.13）
+HSCH2CH2OH | 2-巯基乙醇 | β-巯基乙醇;巯基乙醇;β-ME;BME;2-mercaptoethanol;beta-mercaptoethanol | 2-mercaptoethanol | 60-24-2 | L | 99 | 98-100 | 1.114
+C6H16N2 | TEMED | 四甲基乙二胺;N,N,N',N'-四甲基乙二胺;tetramethylethylenediamine | N,N,N',N'-tetramethylethylenediamine | 110-18-9 | L | 99 | 99-100 | 0.775
+C6H10O5 | 焦碳酸二乙酯 | DEPC;焦炭酸二乙酯;diethyl pyrocarbonate;diethyl dicarbonate | diethyl pyrocarbonate | 1609-47-8 | L | 97 | 97-100 | 1.101
+
+# ---------------------------------------------------------------- common organic solids
+CO(NH2)2 | 尿素 | 脲;碳酰胺;urea;carbamide | urea | 57-13-6
+(NH2)2CS | 硫脲 | 硫代尿素;thiourea | thiourea | 62-56-6
+C6H5OH | 苯酚 | 石炭酸;酚;phenol;carbolic acid | phenol | 108-95-2
+C6H4(OH)2 | 对苯二酚 | 氢醌;hydroquinone;benzene-1,4-diol | hydroquinone | 123-31-9
+C10H8 | 萘 | 萘丸;樟脑丸;naphthalene | naphthalene | 91-20-3
+C12H22O11 | !蔗糖 | D-(+)-sucrose;白砂糖;sucrose;saccharose;cane sugar | sucrose | 57-50-1
+C12H22O11 | 乳糖 | 无水乳糖;lactose;lactose anhydrous | lactose | 63-42-3
+C12H22O11·H2O | 一水乳糖 | 乳糖一水合物;一水合乳糖;lactose monohydrate;α-lactose monohydrate | α-lactose monohydrate | 64044-51-5
+C12H22O11·H2O | 麦芽糖 | 一水麦芽糖;麦芽糖一水合物;maltose;maltose monohydrate;D-(+)-maltose monohydrate | maltose monohydrate | 6363-53-7
+C12H22O11·2H2O | 海藻糖 | 二水海藻糖;海藻糖二水合物;trehalose;D-(+)-trehalose dihydrate | trehalose dihydrate | 6138-23-4
+C6H12O6·H2O | 一水葡萄糖 | 一水合葡萄糖;葡萄糖一水合物;含水葡萄糖;dextrose monohydrate;glucose monohydrate;D-glucose monohydrate | D-glucose monohydrate | 14431-43-7
+C6H12O6 | 果糖 | D-果糖;左旋糖;fructose;D-fructose;levulose | D-fructose | 57-48-7
+C6H12O6 | 半乳糖 | D-半乳糖;galactose;D-galactose | D-galactose | 59-23-4
+C6H12O6 | 甘露糖 | D-甘露糖;mannose;D-mannose | D-mannose | 3458-28-4
+C5H10O5 | 木糖 | D-木糖;xylose;D-xylose | D-xylose | 58-86-6
+C5H10O5 | 核糖 | D-核糖;ribose;D-ribose | D-ribose | 50-69-1
+C5H10O5 | L-阿拉伯糖 | 阿拉伯糖;arabinose;L-arabinose | L-arabinose | 5328-37-0
+C6H14O6 | !甘露醇 | D-甘露醇;mannitol;D-mannitol | D-mannitol | 69-65-8
+C6H14O6 | 山梨醇 | D-山梨醇;山梨糖醇;sorbitol;D-sorbitol;glucitol | D-sorbitol | 50-70-4
+C6H12O6 | 肌醇 | 环己六醇;myo-肌醇;inositol;myo-inositol | myo-inositol | 87-89-8
+C5H12O5 | 木糖醇 | xylitol | xylitol | 87-99-0
+C12H22O11 | 纤维二糖 | D-(+)-纤维二糖;cellobiose | D-(+)-cellobiose | 528-50-7
+NH2CH2COOH | 甘氨酸 | 氨基乙酸;glycine;Gly;aminoacetic acid | glycine | 56-40-6
+C3H7NO2 | L-丙氨酸 | 丙氨酸;L-alanine;alanine;Ala | L-alanine | 56-41-7
+C5H9NO4 | L-谷氨酸 | 谷氨酸;L-glutamic acid;glutamic acid;Glu | L-glutamic acid | 56-86-0
+C5H10N2O3 | L-谷氨酰胺 | 谷氨酰胺;L-glutamine;glutamine;Gln | L-glutamine | 56-85-9
+C6H14N4O2 | L-精氨酸 | 精氨酸;L-arginine;arginine;Arg | L-arginine | 74-79-3
+C6H14N2O2·HCl | L-赖氨酸盐酸盐 | 赖氨酸盐酸盐;盐酸赖氨酸;L-lysine hydrochloride;L-lysine monohydrochloride | L-lysine hydrochloride | 657-27-2
+C6H9N3O2 | L-组氨酸 | 组氨酸;L-histidine;histidine;His | L-histidine | 71-00-1
+C3H7NO2S | L-半胱氨酸 | 半胱氨酸;L-cysteine;cysteine;Cys | L-cysteine | 52-90-4
+C3H7NO2S·HCl·H2O | L-半胱氨酸盐酸盐 | 盐酸半胱氨酸;L-半胱氨酸盐酸盐一水合物;L-cysteine hydrochloride monohydrate | L-cysteine hydrochloride monohydrate | 7048-04-6
+C5H11NO2S | L-甲硫氨酸 | 甲硫氨酸;蛋氨酸;L-蛋氨酸;L-methionine;methionine;Met | L-methionine | 63-68-3
+C11H12N2O2 | L-色氨酸 | 色氨酸;L-tryptophan;tryptophan;Trp | L-tryptophan | 73-22-3
+C9H11NO3 | L-酪氨酸 | 酪氨酸;L-tyrosine;tyrosine;Tyr | L-tyrosine | 60-18-4
+C9H11NO2 | L-苯丙氨酸 | 苯丙氨酸;L-phenylalanine;phenylalanine;Phe | L-phenylalanine | 63-91-2
+C6H13NO2 | !L-亮氨酸 | 亮氨酸;L-leucine;leucine;Leu | L-leucine | 61-90-5
+C6H13NO2 | L-异亮氨酸 | 异亮氨酸;L-isoleucine;isoleucine;Ile | L-isoleucine | 73-32-5
+C5H11NO2 | L-缬氨酸 | 缬氨酸;L-valine;valine;Val | L-valine | 72-18-4
+C5H9NO2 | L-脯氨酸 | 脯氨酸;L-proline;proline;Pro | L-proline | 147-85-3
+C3H7NO3 | L-丝氨酸 | 丝氨酸;L-serine;serine;Ser | L-serine | 56-45-1
+C4H9NO3 | L-苏氨酸 | 苏氨酸;L-threonine;threonine;Thr | L-threonine | 72-19-5
+C4H7NO4 | L-天冬氨酸 | 天冬氨酸;天门冬氨酸;L-aspartic acid;aspartic acid;Asp | L-aspartic acid | 56-84-8
+C4H8N2O3·H2O | L-天冬酰胺 | 天冬酰胺;L-天冬酰胺一水合物;L-asparagine monohydrate;asparagine | L-asparagine monohydrate | 5794-13-8
+C10H17N3O6S | 谷胱甘肽 | 还原型谷胱甘肽;GSH;L-谷胱甘肽;glutathione;reduced glutathione | glutathione | 70-18-8
+C4H10O2S2 | DTT | DL-dithiothreitol;二硫苏糖醇;DL-二硫苏糖醇;dithiothreitol;Cleland's reagent | dithiothreitol | 3483-12-3
+C9H15O6P·HCl | TCEP盐酸盐 | TCEP;三(2-羧乙基)膦盐酸盐;TCEP-HCl;tris(2-carboxyethyl)phosphine hydrochloride | TCEP hydrochloride | 51805-45-9
+CH5N3·HCl | 盐酸胍 | 胍盐酸盐;氯化胍;guanidine hydrochloride;guanidinium chloride | guanidine hydrochloride | 50-01-1
+C2H6N4S | 异硫氰酸胍 | 硫氰酸胍;GITC;guanidine thiocyanate;guanidinium thiocyanate | guanidine thiocyanate | 593-84-0
+C3H5NO | 丙烯酰胺 | acrylamide;2-propenamide | acrylamide | 79-06-1
+C7H10N2O2 | 甲叉双丙烯酰胺 | N,N'-亚甲基双丙烯酰胺;亚甲基双丙烯酰胺;Bis;N,N'-methylenebisacrylamide;bis-acrylamide | N,N'-methylenebisacrylamide | 110-26-9
+C3H4N2 | 咪唑 | 1,3-二氮唑;imidazole | imidazole | 288-32-4
+C8H10N4O2 | 咖啡因 | 咖啡碱;caffeine | caffeine | 58-08-2
+C27H46O | 胆固醇 | 胆甾醇;cholesterol | cholesterol | 57-88-5
+C4H7N3O | 肌酐 | 肌酸酐;creatinine | creatinine | 60-27-5
+C18H36O2 | 硬脂酸 | 十八酸;十八烷酸;stearic acid;octadecanoic acid | stearic acid | 57-11-4
+
+# ---------------------------------------------------------------- buffers & biochemistry
+C4H11NO3·HCl | Tris盐酸盐 | Tris-HCl;Tris HCl;三羟甲基氨基甲烷盐酸盐;盐酸三羟甲基氨基甲烷;tris hydrochloride;Tris hydrochloride | tris(hydroxymethyl)aminomethane hydrochloride | 1185-53-1
+C8H18N2O4S | HEPES | 4-(2-hydroxyethyl)piperazine-1-ethanesulfonic acid;4-(2-hydroxyethyl)-1-piperazineethanesulfonic acid;4-羟乙基哌嗪乙磺酸;N-2-羟乙基哌嗪-N'-2-乙磺酸;4-(2-羟乙基)-1-哌嗪乙磺酸;HEPES free acid | HEPES | 7365-45-9
+C8H17N2NaO4S | HEPES钠盐 | HEPES-Na;HEPES钠;HEPES sodium salt | HEPES sodium salt | 75277-39-3
+C6H13NO4S | MES | 2-(N-morpholino)ethanesulfonic acid hydrate;2-吗啉乙磺酸;2-(N-吗啉)乙磺酸;吗啉乙磺酸;MES free acid;2-(N-morpholino)ethanesulfonic acid | MES | 4432-31-9
+C6H13NO4S·H2O | MES一水合物 | MES水合物;MES monohydrate;MES hydrate | MES monohydrate | 145224-94-8
+C7H15NO4S | MOPS | 3-(N-吗啉基)丙磺酸;吗啉丙磺酸;3-吗啉丙磺酸;3-(N-morpholino)propanesulfonic acid | MOPS | 1132-61-2
+C8H18N2O6S2 | PIPES | 哌嗪-1,4-二乙磺酸;哌嗪二乙磺酸;piperazine-N,N'-bis(2-ethanesulfonic acid) | PIPES | 5625-37-6
+C6H13NO5 | Tricine | 三(羟甲基)甲基甘氨酸;N-三(羟甲基)甲基甘氨酸;tricine | Tricine | 5704-04-1
+C6H13NO4 | Bicine | 二羟乙基甘氨酸;N,N-二(2-羟乙基)甘氨酸;bicine | Bicine | 150-25-4
+C9H19NO3S | CAPS | 3-(环己胺)-1-丙磺酸;3-(环己氨基)-1-丙磺酸;3-(cyclohexylamino)-1-propanesulfonic acid | CAPS | 1135-40-6
+C8H17NO3S | CHES | 2-(环己胺)乙磺酸;2-(环己氨基)乙磺酸;2-(cyclohexylamino)ethanesulfonic acid | CHES | 103-47-9
+C6H15NO6S | TES | N-三(羟甲基)甲基-2-氨基乙磺酸;TES free acid | TES | 7365-44-8
+C8H19NO5 | Bis-Tris | 双(2-羟乙基)氨基(三羟甲基)甲烷;双三;BIS-TRIS;bis-tris methane | Bis-Tris | 6976-37-0
+C10H12N2Na4O8 | EDTA四钠 | EDTA-4Na;乙二胺四乙酸四钠;tetrasodium EDTA;EDTA tetrasodium salt | tetrasodium EDTA | 64-02-8
+C10H14K2N2O8·2H2O | EDTA二钾 | EDTA-2K;EDTA-K2;乙二胺四乙酸二钾;乙二胺四乙酸二钾二水合物;dipotassium EDTA dihydrate | dipotassium EDTA dihydrate | 25102-12-9
+C12H25NaO4S | 十二烷基硫酸钠 | dodecyl sulfate sodium salt;SDS;月桂基硫酸钠;K12;sodium dodecyl sulfate;sodium lauryl sulfate;SLS | sodium dodecyl sulfate | 151-21-3
+C18H29NaO3S | 十二烷基苯磺酸钠 | SDBS;sodium dodecylbenzenesulfonate | sodium dodecylbenzenesulfonate | 25155-30-0
+C19H42BrN | 十六烷基三甲基溴化铵 | CTAB;溴化十六烷基三甲铵;西曲溴铵;cetyltrimethylammonium bromide;hexadecyltrimethylammonium bromide | cetyltrimethylammonium bromide | 57-09-0
+C24H39NaO4 | 脱氧胆酸钠 | sodium deoxycholate | sodium deoxycholate | 302-95-4
+C32H58N2O7S | CHAPS | 3-[(3-胆酰胺丙基)二甲氨基]丙磺酸内盐 | CHAPS | 75621-03-3
+C7H7FO2S | PMSF | 苯甲基磺酰氟;苯甲磺酰氟;phenylmethylsulfonyl fluoride | phenylmethylsulfonyl fluoride | 329-98-6
+C9H18O5S | IPTG | 异丙基-β-D-硫代半乳糖苷;异丙基硫代半乳糖苷;isopropyl β-D-1-thiogalactopyranoside | IPTG | 367-93-1
+C14H15BrClNO6 | X-gal | 5-溴-4-氯-3-吲哚-β-D-半乳糖苷;X-Gal | X-gal | 7240-90-6
+C10H14N5Na2O13P3 | ATP二钠 | 腺苷三磷酸二钠;三磷酸腺苷二钠;ATP disodium salt;adenosine 5'-triphosphate disodium salt | adenosine triphosphate disodium salt | 34369-07-8
+C16H18N3NaO4S | 氨苄青霉素钠 | 氨苄西林钠;Amp;ampicillin sodium;ampicillin sodium salt | ampicillin sodium | 69-52-3
+C18H36N4O11·H2SO4 | 硫酸卡那霉素 | 卡那霉素;卡那霉素硫酸盐;Kan;kanamycin sulfate;kanamycin monosulfate | kanamycin sulfate | 25389-94-0
+(C21H39N7O12)2·3H2SO4 | 硫酸链霉素 | 链霉素;链霉素硫酸盐;streptomycin sulfate | streptomycin sulfate | 3810-74-0
+C11H12Cl2N2O5 | 氯霉素 | chloramphenicol;Cm | chloramphenicol | 56-75-7
+C16H17KN2O4S | 青霉素G钾 | 青霉素钾;苄青霉素钾;penicillin G potassium;benzylpenicillin potassium | penicillin G potassium | 113-98-4
+C12H17ClN4OS·HCl | 盐酸硫胺 | 维生素B1;硫胺素盐酸盐;盐酸硫胺素;thiamine hydrochloride;vitamin B1 | thiamine hydrochloride | 67-03-8
+C10H16N2O3S | 生物素 | 维生素H;维生素B7;D-生物素;biotin;vitamin H | biotin | 58-85-5
+C19H19N7O6 | 叶酸 | 维生素B9;folic acid;vitamin B9 | folic acid | 59-30-3
+C17H20N4O6 | 核黄素 | 维生素B2;riboflavin;vitamin B2 | riboflavin | 83-88-5
+C21H20BrN3 | 溴化乙锭 | EB;溴乙锭;ethidium bromide | ethidium bromide | 1239-45-8
+C16H15N5·2HCl | DAPI | 4',6-二脒基-2-苯基吲哚;DAPI二盐酸盐;4',6-diamidino-2-phenylindole dihydrochloride | DAPI dihydrochloride | 28718-90-3
+C27H34I2N4 | 碘化丙啶 | PI;propidium iodide | propidium iodide | 25535-16-4
+C18H16BrN5S | MTT | 噻唑蓝;3-(4,5-二甲基噻唑-2)-2,5-二苯基四氮唑溴盐;thiazolyl blue tetrazolium bromide | MTT | 298-93-1
+C19H15ClN4 | TTC | 氯化三苯基四氮唑;2,3,5-氯化三苯基四氮唑;红四氮唑;2,3,5-triphenyltetrazolium chloride | 2,3,5-triphenyltetrazolium chloride | 298-96-4
+C16H20N2 | TMB | 3,3',5,5'-四甲基联苯胺;四甲基联苯胺;3,3',5,5'-tetramethylbenzidine | 3,3',5,5'-tetramethylbenzidine | 54827-17-7
+
+# ---------------------------------------------------------------- indicators, stains & analytical reagents
+C20H14O4 | 酚酞 | phenolphthalein | phenolphthalein | 77-09-8
+C14H14N3NaO3S | 甲基橙 | methyl orange | methyl orange | 547-58-0
+C15H15N3O2 | 甲基红 | methyl red | methyl red | 493-52-7
+C21H14Br4O5S | 溴甲酚绿 | 溴甲酚绿指示剂;bromocresol green | bromocresol green | 76-60-8
+C21H16Br2O5S | 溴甲酚紫 | bromocresol purple | bromocresol purple | 115-40-2
+C27H28Br2O5S | 溴百里酚蓝 | 溴麝香草酚蓝;BTB;bromothymol blue | bromothymol blue | 76-59-5
+C27H30O5S | 百里酚蓝 | 麝香草酚蓝;thymol blue | thymol blue | 76-61-9
+C28H30O4 | 百里酚酞 | 麝香草酚酞;thymolphthalein | thymolphthalein | 125-20-2
+C19H14O5S | 酚红 | 苯酚红;phenol red;phenolsulfonphthalein | phenol red | 143-74-8
+C19H10Br4O5S | 溴酚蓝 | bromophenol blue | bromophenol blue | 115-39-9
+C20H12N3NaO7S | 铬黑T | 铬黑 T;EBT;eriochrome black T | eriochrome black T | 1787-61-7
+C21H14N2O7S | 钙指示剂 | 钙羧酸;钙红;calconcarboxylic acid;Patton-Reeder indicator | calconcarboxylic acid | 3737-95-9
+C31H28N2Na4O13S | 二甲酚橙 | 二甲酚橙四钠盐;xylenol orange;xylenol orange tetrasodium salt | xylenol orange tetrasodium salt | 3618-43-7
+C8H8N6O6 | 紫脲酸铵 | 红紫酸铵;murexide;ammonium purpurate | murexide | 3051-09-0
+C12H10NNaO3S | 二苯胺磺酸钠 | sodium diphenylamine-4-sulfonate | sodium diphenylamine-4-sulfonate | 6152-67-6
+C12H8N2·H2O | 邻二氮菲 | 1,10-菲啰啉;邻菲罗啉;一水合邻二氮菲;1,10-phenanthroline monohydrate;o-phenanthroline | 1,10-phenanthroline monohydrate | 5144-89-8
+C15H11N3O | PAN | 1-(2-吡啶偶氮)-2-萘酚;1-(2-pyridylazo)-2-naphthol | 1-(2-pyridylazo)-2-naphthol | 85-85-8
+C30H26N2O13 | 钙黄绿素 | 荧光黄络合剂;calcein | calcein | 1461-15-0
+C20H12O5 | 荧光素 | 荧光黄;fluorescein | fluorescein | 2321-07-5
+C20H10Na2O5 | 荧光素钠 | 荧光黄钠;uranine;fluorescein sodium | fluorescein sodium | 518-47-8
+C6H7NO3S | 对氨基苯磺酸 | 磺胺酸;sulfanilic acid | sulfanilic acid | 121-57-3
+C12H14N2·2HCl | 盐酸萘乙二胺 | N-(1-萘基)乙二胺盐酸盐;N-(1-萘基)乙二胺二盐酸盐;N-(1-naphthyl)ethylenediamine dihydrochloride | N-(1-naphthyl)ethylenediamine dihydrochloride | 1465-25-4
+C13H14N4O | 二苯碳酰二肼 | 二苯卡巴肼;1,5-二苯卡巴肼;1,5-diphenylcarbazide;diphenylcarbazide | 1,5-diphenylcarbazide | 140-22-7
+C4H8N2O2 | 丁二酮肟 | 二甲基乙二醛肟;二甲基乙二肟;dimethylglyoxime | dimethylglyoxime | 95-45-4
+C9H7NO | 8-羟基喹啉 | 8-喹啉醇;8-hydroxyquinoline;oxine | 8-hydroxyquinoline | 148-24-3
+C9H6O4 | 茚三酮 | 水合茚三酮;ninhydrin | ninhydrin | 485-47-2
+C14H10O | 蒽酮 | anthrone | anthrone | 90-44-8
+C7H4N2O7 | 3,5-二硝基水杨酸 | DNS;二硝基水杨酸;3,5-dinitrosalicylic acid | 3,5-dinitrosalicylic acid | 609-99-4
+C47H48N3NaO7S2 | 考马斯亮蓝G-250 | 考马斯亮蓝G250;考马斯亮蓝 G-250;Coomassie Brilliant Blue G-250 | Coomassie Brilliant Blue G-250 | 6104-58-1
+C45H44N3NaO7S2 | 考马斯亮蓝R-250 | 考马斯亮蓝R250;考马斯亮蓝 R-250;Coomassie Brilliant Blue R-250 | Coomassie Brilliant Blue R-250 | 6104-59-2
+C16H18ClN3S | 亚甲蓝 | 亚甲基蓝;美蓝;次甲基蓝;methylene blue | methylene blue | 61-73-4
+C25H30ClN3 | 结晶紫 | 龙胆紫;甲紫;crystal violet;gentian violet | crystal violet | 548-62-9
+C20H19ClN4 | 番红O | 番红;沙黄;safranin O;safranine | safranin O | 477-73-6
+C15H17ClN4 | 中性红 | neutral red | neutral red | 553-24-2
+C34H24N6Na4O14S4 | 台盼蓝 | 锥虫蓝;trypan blue | trypan blue | 72-57-1
+C32H22N6Na2O6S2 | 刚果红 | Congo red | Congo red | 573-58-0
+C20H20ClN3 | 碱性品红 | 盐基品红;碱性复红;basic fuchsin;rosaniline hydrochloride | basic fuchsin | 632-99-5
+C14H7NaO7S | 茜素红S | 茜素红;alizarin red S | alizarin red S | 130-22-3
+C16H14O6 | 苏木精 | 苏木素;haematoxylin;hematoxylin | haematoxylin | 517-28-2
+C20H6Br4Na2O5 | 伊红Y | 伊红;曙红;曙红Y;eosin Y;eosin | eosin Y | 17372-87-1
+C22H16N4O | 苏丹III | 苏丹Ⅲ;Sudan III | Sudan III | 85-86-9
+C26H24N4O | 油红O | Oil Red O | Oil Red O | 1320-06-5
+C15H16ClN3S | 甲苯胺蓝 | 甲苯胺蓝O;toluidine blue O;toluidine blue | toluidine blue O | 92-31-9
+C28H31ClN2O3 | 罗丹明B | 玫瑰红B;rhodamine B | rhodamine B | 81-88-9
+C8H11N2NaO3 | 巴比妥钠 | 佛罗那钠;barbital sodium | barbital sodium | 144-02-5
+C2H6AsNaO2·3H2O | 二甲胂酸钠 | 卡可基酸钠;三水合二甲胂酸钠;sodium cacodylate trihydrate | sodium cacodylate trihydrate | 6131-99-3
+
+# ---------------------------------------------------------------- additions
+(CH2)6N4 | 六次甲基四胺 | 乌洛托品;六亚甲基四胺;环六亚甲基四胺;hexamethylenetetramine;methenamine;urotropine | hexamethylenetetramine | 100-97-0
+KIO4 | 高碘酸钾 | 偏高碘酸钾;potassium periodate;potassium metaperiodate | potassium periodate | 7790-21-8
+CaC2 | 碳化钙 | 电石;calcium carbide | calcium carbide | 75-20-7
+C2H5N3O2 | 双缩脲 | 缩二脲;biuret | biuret | 108-19-0
+C22H12N4Na4O13S4 | 丽春红S | 丽春红;丽春红 S;Ponceau S | Ponceau S | 6226-79-5
+C22H29FO5 | 地塞米松 | dexamethasone | dexamethasone | 50-02-2
+C22H25NO6 | 秋水仙碱 | 秋水仙素;colchicine | colchicine | 64-86-8
+NH3·H2O | 一水合氨 | 水合氨;ammonia monohydrate | ammonia monohydrate | 

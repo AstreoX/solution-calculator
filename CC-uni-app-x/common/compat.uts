@@ -1,0 +1,245 @@
+// 反应与相容性规则库（常见无机反应，基于离子判断）—— 离线规则，与设计稿逻辑一致
+import { normF, pretty } from './chem.uts'
+
+type IonInfo = {
+	cat : string[]
+	an : string[]
+	acid : string // '' | 'strong' | 'weak'
+	base : string
+	ox : string // '' | 'strong' | 'mild'
+	red : boolean
+	redCl : boolean
+}
+
+export type Warn = {
+	level : string // 高 / 中 / 提示
+	title : string
+	detail : string
+	pairs : string
+	members : string[]
+}
+
+export type CheckResult = {
+	list : Warn[]
+	known : number
+}
+
+type MixItem = {
+	f : string
+	p : string
+	i : IonInfo
+}
+
+type WarnAcc = {
+	level : string
+	title : string
+	detail : string
+	pairs : string[]
+	members : string[]
+}
+
+const CATS = ['NH4', 'Na', 'K', 'Li', 'Ca', 'Mg', 'Ba', 'Sr', 'Ag', 'Pb', 'Cu', 'Fe', 'Zn', 'Al', 'Mn', 'Co', 'Ni', 'Hg', 'Cd', 'Sn']
+const ANS = ['H2PO4', 'HPO4', 'PO4', 'HCO3', 'CO3', 'HSO4', 'HSO3', 'S2O3', 'S2O8', 'SO4', 'SO3', 'Cr2O7', 'CrO4', 'MnO4', 'ClO4', 'ClO3', 'ClO', 'BrO3', 'IO3', 'NO3', 'NO2', 'C2O4', 'SCN', 'CN', 'OH', 'Cl', 'Br', 'I', 'F', 'S']
+
+function mapOf(pairs : string[][]) : Map<string, string> {
+	const m = new Map<string, string>()
+	for (let i = 0; i < pairs.length; i++) m.set(pairs[i][0], pairs[i][1])
+	return m
+}
+
+const ION = mapOf([['NH4', 'NH₄⁺'], ['Na', 'Na⁺'], ['K', 'K⁺'], ['Li', 'Li⁺'], ['Ca', 'Ca²⁺'], ['Mg', 'Mg²⁺'], ['Ba', 'Ba²⁺'], ['Sr', 'Sr²⁺'], ['Ag', 'Ag⁺'], ['Pb', 'Pb²⁺'], ['Cu', 'Cu²⁺'], ['Fe2', 'Fe²⁺'], ['Fe3', 'Fe³⁺'], ['Zn', 'Zn²⁺'], ['Al', 'Al³⁺'], ['Mn', 'Mn²⁺'], ['Co', 'Co²⁺'], ['Ni', 'Ni²⁺'], ['Hg', 'Hg²⁺'], ['Cd', 'Cd²⁺'], ['Sn2', 'Sn²⁺']])
+
+function info(cat : string[], an : string[], acid : string, base : string, ox : string, red : boolean, redCl : boolean) : IonInfo {
+	return { cat: cat, an: an, acid: acid, base: base, ox: ox, red: red, redCl: redCl } as IonInfo
+}
+
+function buildSpecial() : Map<string, IonInfo> {
+	const m = new Map<string, IonInfo>()
+	m.set('HCl', info([], ['Cl'], 'strong', '', '', false, true))
+	m.set('HBr', info([], ['Br'], 'strong', '', '', false, false))
+	m.set('HI', info([], ['I'], 'strong', '', '', false, false))
+	m.set('HNO3', info([], ['NO3'], 'strong', '', 'strong', false, false))
+	m.set('H2SO4', info([], ['SO4'], 'strong', '', '', false, false))
+	m.set('HClO4', info([], ['ClO4'], 'strong', '', '', false, false))
+	m.set('H3PO4', info([], ['PO4'], 'weak', '', '', false, false))
+	m.set('CH3COOH', info([], [], 'weak', '', '', false, false))
+	m.set('HF', info([], ['F'], 'weak', '', '', false, false))
+	m.set('H2C2O4', info([], ['C2O4'], 'weak', '', '', true, false))
+	m.set('C6H8O7', info([], [], 'weak', '', '', false, false))
+	m.set('C6H8O6', info([], [], 'weak', '', '', true, false))
+	m.set('NaOH', info(['Na'], ['OH'], '', 'strong', '', false, false))
+	m.set('KOH', info(['K'], ['OH'], '', 'strong', '', false, false))
+	m.set('LiOH', info(['Li'], ['OH'], '', 'strong', '', false, false))
+	m.set('Ba(OH)2', info(['Ba'], ['OH'], '', 'strong', '', false, false))
+	m.set('Ca(OH)2', info(['Ca'], ['OH'], '', 'strong', '', false, false))
+	m.set('NH3', info([], [], '', 'weak', '', false, false))
+	m.set('C4H11NO3', info([], [], '', 'weak', '', false, false))
+	m.set('H2O2', info([], [], '', '', 'strong', false, false))
+	m.set('CH3COONa', info(['Na'], [], '', '', '', false, false))
+	m.set('(NH4)2Fe(SO4)2', info(['NH4', 'Fe2'], ['SO4'], '', '', '', false, false))
+	return m
+}
+const SPECIAL = buildSpecial()
+
+const OXAN = mapOf([['MnO4', 'strong'], ['Cr2O7', 'strong'], ['CrO4', 'mild'], ['ClO', 'strong'], ['ClO3', 'strong'], ['BrO3', 'strong'], ['IO3', 'mild'], ['S2O8', 'strong']])
+const REDAN = ['I', 'S', 'SO3', 'HSO3', 'S2O3', 'C2O4', 'NO2']
+const FE3_RE = /^(FeCl3|FeBr3|Fe2\(SO4\)3|Fe\(NO3\)3|FePO4)/
+const CAT_RE = /^\(?(NH4|[A-Z][a-z]?)/
+
+function buildAnRes() : RegExp[] {
+	const out : RegExp[] = []
+	for (let k = 0; k < ANS.length; k++) out.push(new RegExp(ANS[k] + '\\)?[0-9]*$'))
+	return out
+}
+const AN_RES = buildAnRes()
+
+function ionsOf(f : string) : IonInfo | null {
+	const core = normF(f).split('·')[0]
+	if (core.length == 0) return null
+	const sp = SPECIAL.get(core)
+	let inf : IonInfo
+	if (sp != null) {
+		inf = info(sp.cat.slice(0), sp.an.slice(0), sp.acid, sp.base, sp.ox, sp.red, sp.redCl)
+	} else {
+		const m = CAT_RE.exec(core)
+		if (m == null) return null
+		let c = m[1]!
+		if (CATS.indexOf(c) < 0) return null
+		if (c == 'Fe') c = FE3_RE.test(core) ? 'Fe3' : 'Fe2'
+		if (c == 'Sn') c = 'Sn2'
+		let a = ''
+		for (let k = 0; k < ANS.length; k++) {
+			if (AN_RES[k].test(core)) {
+				a = ANS[k]
+				break
+			}
+		}
+		inf = info([c], a.length > 0 ? [a] : [], '', '', '', false, false)
+		if (a == 'OH' && ['Na', 'K', 'Li', 'Ba', 'Ca'].indexOf(c) >= 0) inf.base = 'strong'
+		if (a.length > 0 && OXAN.has(a)) inf.ox = OXAN.get(a)!
+	}
+	for (let k = 0; k < inf.an.length; k++) {
+		if (REDAN.indexOf(inf.an[k]) >= 0) inf.red = true
+	}
+	if (inf.cat.indexOf('Fe2') >= 0 || inf.cat.indexOf('Sn2') >= 0) inf.red = true
+	if (inf.cat.indexOf('Fe3') >= 0 && inf.ox.length == 0) inf.ox = 'mild'
+	return inf
+}
+
+const PHOS = ['PO4', 'HPO4', 'H2PO4']
+
+function buildPpt() : Map<string, string[]> {
+	const raw : string[][] = [
+		['Ag|Cl', 'AgCl 白色沉淀', '高'], ['Ag|Br', 'AgBr 浅黄色沉淀', '高'], ['Ag|I', 'AgI 黄色沉淀', '高'], ['Ag|CO3', 'Ag₂CO₃ 沉淀', '高'], ['Ag|PO4', 'Ag₃PO₄ 黄色沉淀', '高'], ['Ag|HPO4', 'Ag₃PO₄ 黄色沉淀', '高'], ['Ag|OH', 'Ag₂O 棕黑色沉淀', '高'], ['Ag|S', 'Ag₂S 黑色沉淀', '高'], ['Ag|CrO4', 'Ag₂CrO₄ 砖红色沉淀', '高'], ['Ag|SCN', 'AgSCN 白色沉淀', '高'], ['Ag|C2O4', 'Ag₂C₂O₄ 沉淀', '高'], ['Ag|SO4', 'Ag₂SO₄ 微溶，浓度高时析出', '提示'],
+		['Ba|SO4', 'BaSO₄ 白色沉淀', '高'], ['Ba|CO3', 'BaCO₃ 白色沉淀', '高'], ['Ba|PO4', 'Ba₃(PO₄)₂ 沉淀', '高'], ['Ba|HPO4', 'BaHPO₄ 沉淀', '高'], ['Ba|SO3', 'BaSO₃ 白色沉淀', '高'], ['Ba|CrO4', 'BaCrO₄ 黄色沉淀', '高'], ['Ba|C2O4', 'BaC₂O₄ 沉淀', '高'],
+		['Ca|CO3', 'CaCO₃ 白色沉淀', '高'], ['Ca|F', 'CaF₂ 白色沉淀', '高'], ['Ca|C2O4', 'CaC₂O₄ 白色沉淀', '高'], ['Ca|SO4', 'CaSO₄ 微溶，浓度高时析出', '提示'], ['Ca|OH', 'Ca(OH)₂ 微溶，可能浑浊', '提示'],
+		['Sr|SO4', 'SrSO₄ 白色沉淀', '高'], ['Sr|CO3', 'SrCO₃ 白色沉淀', '高'],
+		['Pb|Cl', 'PbCl₂ 白色沉淀（冷时明显）', '中'], ['Pb|Br', 'PbBr₂ 沉淀', '高'], ['Pb|I', 'PbI₂ 黄色沉淀', '高'], ['Pb|SO4', 'PbSO₄ 白色沉淀', '高'], ['Pb|CO3', 'PbCO₃ 白色沉淀', '高'], ['Pb|CrO4', 'PbCrO₄ 黄色沉淀', '高'], ['Pb|S', 'PbS 黑色沉淀', '高'], ['Pb|OH', 'Pb(OH)₂ 白色沉淀', '高'], ['Pb|PO4', 'Pb₃(PO₄)₂ 沉淀', '高'], ['Pb|HPO4', 'PbHPO₄ 沉淀', '高'],
+		['Mg|CO3', 'MgCO₃ 微溶，可能浑浊', '中'], ['Mg|OH', 'Mg(OH)₂ 白色沉淀', '高'], ['Mg|F', 'MgF₂ 沉淀', '中'],
+		['Cu|OH', 'Cu(OH)₂ 蓝色沉淀', '高'], ['Cu|CO3', '碱式碳酸铜 蓝绿色沉淀', '高'], ['Cu|S', 'CuS 黑色沉淀', '高'], ['Cu|PO4', 'Cu₃(PO₄)₂ 沉淀', '中'], ['Cu|HPO4', '磷酸铜沉淀', '中'], ['Cu|I', 'CuI 沉淀并析出 I₂', '高'],
+		['Fe3|OH', 'Fe(OH)₃ 红褐色沉淀', '高'], ['Fe3|PO4', 'FePO₄ 沉淀', '中'], ['Fe3|HPO4', 'FePO₄ 沉淀', '中'], ['Fe3|CO3', 'Fe(OH)₃ 沉淀并放出 CO₂（双水解）', '高'], ['Fe3|SCN', '血红色配合物（显色）', '中'],
+		['Fe2|OH', 'Fe(OH)₂ 沉淀（白→灰绿→红褐）', '高'], ['Fe2|S', 'FeS 黑色沉淀', '高'], ['Fe2|CO3', 'FeCO₃ 沉淀', '中'],
+		['Al|OH', 'Al(OH)₃ 白色胶状沉淀（强碱过量溶解）', '高'], ['Al|CO3', 'Al(OH)₃ 沉淀并放出 CO₂（双水解）', '高'], ['Al|PO4', 'AlPO₄ 沉淀', '中'], ['Al|HPO4', 'AlPO₄ 沉淀', '中'], ['Al|S', 'Al(OH)₃ 沉淀并放出 H₂S', '高'],
+		['Zn|OH', 'Zn(OH)₂ 白色沉淀（过量溶解）', '中'], ['Zn|S', 'ZnS 白色沉淀', '高'], ['Zn|CO3', '碱式碳酸锌 沉淀', '中'], ['Zn|PO4', 'Zn₃(PO₄)₂ 沉淀', '中'], ['Zn|HPO4', '磷酸锌沉淀', '中'],
+		['Mn|OH', 'Mn(OH)₂ 沉淀（遇空气变棕）', '高'], ['Mn|S', 'MnS 肉色沉淀', '高'], ['Mn|CO3', 'MnCO₃ 沉淀', '中'],
+		['Co|OH', 'Co(OH)₂ 沉淀', '高'], ['Co|S', 'CoS 黑色沉淀', '高'], ['Co|CO3', 'CoCO₃ 沉淀', '中'],
+		['Ni|OH', 'Ni(OH)₂ 绿色沉淀', '高'], ['Ni|S', 'NiS 黑色沉淀', '高'], ['Ni|CO3', 'NiCO₃ 沉淀', '中'],
+		['Hg|I', 'HgI₂ 红色沉淀（过量溶解）', '高'], ['Hg|S', 'HgS 黑色沉淀', '高'], ['Hg|OH', 'HgO 黄色沉淀', '高'],
+		['Cd|S', 'CdS 黄色沉淀', '高'], ['Cd|OH', 'Cd(OH)₂ 沉淀', '高'],
+		['Sn2|OH', 'Sn(OH)₂ 沉淀', '高'], ['Sn2|S', 'SnS 棕色沉淀', '高']
+	]
+	const m = new Map<string, string[]>()
+	for (let i = 0; i < raw.length; i++) m.set(raw[i][0], [raw[i][1], raw[i][2]])
+	return m
+}
+const PPT = buildPpt()
+
+export function levelRank(l : string) : number {
+	return l == '高' ? 3 : (l == '中' ? 2 : (l == '提示' ? 1 : 0))
+}
+
+class Mixer {
+	map : Map<string, WarnAcc> = new Map<string, WarnAcc>()
+	order : string[] = []
+	cur : string[] = []
+
+	add(key : string, level : string, title : string, detail : string, pair : string) {
+		let w = this.map.get(key)
+		if (w == null) {
+			w = { level: level, title: title, detail: detail, pairs: [], members: [] } as WarnAcc
+			this.map.set(key, w)
+			this.order.push(key)
+		}
+		const ww = w!
+		if (ww.pairs.indexOf(pair) < 0) ww.pairs.push(pair)
+		for (let i = 0; i < this.cur.length; i++) {
+			if (ww.members.indexOf(this.cur[i]) < 0) ww.members.push(this.cur[i])
+		}
+		if (levelRank(level) > levelRank(ww.level)) ww.level = level
+	}
+
+	dir(A : MixItem, B : MixItem) {
+		const pair = A.p + ' × ' + B.p
+		this.cur = [A.f, B.f]
+		for (let ci = 0; ci < A.i.cat.length; ci++) {
+			const c = A.i.cat[ci]
+			for (let ai = 0; ai < B.i.an.length; ai++) {
+				const a = B.i.an[ai]
+				if ((c == 'Ca' || c == 'Mg') && PHOS.indexOf(a) >= 0) {
+					if (c == 'Ca') this.add('phos|Ca', '中', 'Ca²⁺ + 磷酸盐 → 磷酸钙沉淀', '稀溶液中通常可共存，但浓缩、偏碱性或加热灭菌时易析出。建议钙盐单独配成母液，其余组分溶解定容后最后缓慢加入。', pair)
+					else this.add('phos|Mg', '提示', 'Mg²⁺ + 磷酸盐 → 可能析出磷酸镁', '浓缩或碱性条件下可能浑浊。建议与钙盐一样单独溶解后最后加入。', pair)
+					continue
+				}
+				const r = PPT.get(c + '|' + a)
+				if (r != null) {
+					const ionName = ION.get(c)
+					this.add('ppt|' + c + '|' + a, r[1], (ionName != null ? ionName : c) + ' → ' + r[0], '两者混合会生成难溶物，对应离子浓度将降低。如非实验目的，请分开配制。', pair)
+				}
+			}
+		}
+		const an = B.i.an
+		if (A.i.acid.length > 0) {
+			if (B.i.base.length > 0) this.add('neut', '中', '酸碱中和', '混合放热，酸或碱的实际浓度下降、pH 改变。配缓冲液调 pH 时属正常操作，否则请分开配制。', pair)
+			if (an.indexOf('CO3') >= 0 || an.indexOf('HCO3') >= 0) this.add('co2', '中', '酸 + 碳酸盐 → 放出 CO₂', '会冒泡甚至溢出，碳酸盐被消耗。请缓慢加入并充分搅拌。', pair)
+			if (an.indexOf('ClO') >= 0) this.add('cl2', '高', '酸 + 次氯酸盐 → 释放氯气', '生成有毒 Cl₂，切勿混合。', pair)
+			if (an.indexOf('S') >= 0) this.add('h2s', '高', '酸 + 硫化物 → 释放 H₂S', '生成有毒气体，切勿混合，须在通风橱操作。', pair)
+			if (an.indexOf('CN') >= 0) this.add('hcn', '高', '酸 + 氰化物 → 释放 HCN', '生成剧毒气体，严禁混合。', pair)
+			if (an.indexOf('S2O3') >= 0) this.add('s2o3', '中', '酸 + 硫代硫酸盐 → 析出硫', '溶液变浑并放出 SO₂，试剂失效。', pair)
+			if (an.indexOf('SO3') >= 0 || an.indexOf('HSO3') >= 0) this.add('so2', '中', '酸 + 亚硫酸盐 → 放出 SO₂', '有刺激性气体，请在通风处操作。', pair)
+			if (an.indexOf('NO2') >= 0) this.add('no2', '中', '酸 + 亚硝酸盐 → 放出氮氧化物', '有毒气体，请在通风橱操作。', pair)
+		}
+		if (A.i.base == 'strong' && B.i.cat.indexOf('NH4') >= 0) this.add('nh3', '中', '强碱 + 铵盐 → 放出氨气', '有刺激性气味，铵盐被消耗。', pair)
+		if (A.i.ox.length > 0 && B.i.red) this.add('redox|' + A.f + '|' + B.f, A.i.ox == 'strong' ? '高' : '中', '氧化还原反应', A.p + ' 是氧化剂，' + B.p + ' 是还原剂。混合后试剂失效，部分反应剧烈放热。', pair)
+		if (A.i.ox == 'strong' && B.i.redCl && A.i.acid.length == 0 && A.i.an.indexOf('ClO') < 0) this.add('cl2ox', '高', '强氧化剂 + 盐酸 → 可能生成氯气', '高锰酸盐、氯酸盐等可将 Cl⁻ 氧化为有毒 Cl₂。', pair)
+	}
+}
+
+export function checkMix(formulas : string[]) : CheckResult {
+	const items : MixItem[] = []
+	for (let k = 0; k < formulas.length; k++) {
+		const f = formulas[k]
+		const inf = ionsOf(f)
+		if (inf != null) items.push({ f: normF(f), p: pretty(f), i: inf } as MixItem)
+	}
+	const mx = new Mixer()
+	for (let x = 0; x < items.length; x++) {
+		for (let y = 0; y < items.length; y++) {
+			if (x != y && items[x].f != items[y].f) mx.dir(items[x], items[y])
+		}
+	}
+	const out : Warn[] = []
+	for (let k = 0; k < mx.order.length; k++) {
+		const w = mx.map.get(mx.order[k])!
+		out.push({ level: w.level, title: w.title, detail: w.detail, pairs: w.pairs.join('；'), members: w.members } as Warn)
+	}
+	// 稳定排序：按严重程度降序
+	const idx : number[] = []
+	for (let k = 0; k < out.length; k++) idx.push(k)
+	idx.sort((a : number, b : number) : number => {
+		const d = levelRank(out[b].level) - levelRank(out[a].level)
+		return d != 0 ? d : a - b
+	})
+	const sorted : Warn[] = []
+	for (let k = 0; k < idx.length; k++) sorted.push(out[idx[k]])
+	return { list: sorted, known: items.length } as CheckResult
+}

@@ -1,0 +1,614 @@
+<template>
+	<view class="root" @touchstart="onDown" @touchmove="onMove" @touchend="onUp" @touchcancel="onCancel">
+		<view class="dim"></view>
+		<view class="disc" :style="disc0Style"></view>
+		<view class="disc" :style="disc1Style"></view>
+		<view class="disc" :style="disc2Style"></view>
+		<view ref="cvA" class="cv" :style="cvStyle"></view>
+		<view v-for="(l, i) in labels" :key="i" class="lab" :style="{ left: l.x + 'px', top: l.y + 'px', opacity: l.op, backgroundColor: l.bg }">
+			<text :class="['lab-t', l.on ? 'lab-on' : '']">{{ l.t }}</text>
+		</view>
+		<view ref="cvB" class="cv" :style="cvStyle"></view>
+		<view class="save" :style="{ left: (W - 60) + 'px', top: (cy - 42) + 'px' }" @touchstart.stop="noop" @click="saveBtn">
+			<image v-if="locked" class="lock" src="/static/icons/lock-FFFFFF.svg"></image>
+			<text class="save-t" :style="{ color: saveFg }">SAVE</text>
+			<text class="save-s" :style="{ color: saveFg }">保存</text>
+		</view>
+		<view class="bubble" :style="{ top: (cy - 62) + 'px' }">
+			<text class="b-label">{{ labelLine }}</text>
+			<text class="b-val">{{ shown }}</text>
+			<text v-if="result.length > 0" class="b-res">{{ '→ ' + result }}</text>
+			<text :class="['b-mode', locked ? 'b-mode-on' : '']">{{ modeText }}</text>
+		</view>
+	</view>
+</template>
+
+<script setup lang="uts">
+	// 旋钮：圆心在屏幕右缘外；外圈粗调、内圈微调、最内侧 SAVE（进入即锁定，松手保存）
+	import { DialSpec } from '@/common/types.uts'
+	import { num, numStr, sig } from '@/common/fmt.uts'
+
+	defineOptions({ styleIsolation: 'app' })
+
+	const props = defineProps({
+		value: { type: String, default: '' },
+		label: { type: String, default: '' },
+		unit: { type: String, default: '' },
+		result: { type: String, default: '' },
+		anchorY: { type: Number, default: 430 },
+		spec: { type: Object as PropType<DialSpec>, required: true },
+		dragging: { type: Boolean, default: false }
+	})
+	const emit = defineEmits(['change', 'close'])
+
+	type Tick = { x0 : number, y0 : number, x1 : number, y1 : number, op : number, major : boolean }
+	type Label = { t : string, x : number, y : number, op : number, on : boolean, bg : string }
+
+	const win = uni.getWindowInfo()
+	const W = win.windowWidth
+	const H = win.windowHeight
+	const R0 = 236, R1 = 158, R2 = 90, RL = 198, TC = 10, TF = 5, PXC = 34, PXF = 16
+	const CX = W + 28
+
+	const acc = ref(0)
+	const mode = ref('coarse')
+	const sticky = ref(false)
+	const locked = ref(false)
+
+	const cvA = ref<UniElement | null>(null)
+	const cvB = ref<UniElement | null>(null)
+
+	let drag = false
+	let moved = false
+	let hasLast = false
+	let lastX = 0
+	let lastY = 0
+	let startSet = false
+	let downX = 0
+	let downY = 0
+	let armed = false
+
+	const cy = computed(() : number => Math.min(H - 204, Math.max(300, props.anchorY + 100)))
+
+	// —— 数值步进（1-2-5 序列 / 常用容量 / 线性）——
+	function s125() : number[] {
+		const out : number[] = []
+		for (let e = -6; e <= 3; e++) {
+			const ms = [1, 2, 5]
+			for (let k = 0; k < 3; k++) out.push(parseFloat((ms[k] * Math.pow(10, e)).toPrecision(3)))
+		}
+		return out
+	}
+	const SER_CONC = s125()
+	const SER_VOL = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000]
+	function ser(sp : DialSpec) : number[] {
+		return sp.type == 'vol' ? SER_VOL : SER_CONC
+	}
+	function isSer(sp : DialSpec) : boolean {
+		return sp.type == 'conc' || sp.type == 'vol'
+	}
+	function decOf(step : number) : number {
+		return Math.max(0, Math.round(-Math.log10(step) + 0.4999))
+	}
+	function fmt(v : number, step : number) : string {
+		return numStr(parseFloat(v.toFixed(decOf(step))))
+	}
+	function p3(v : number) : string {
+		return sig(v, 3)
+	}
+	function clamp(v : number, sp : DialSpec) : number {
+		return Math.min(sp.max, Math.max(sp.min, v))
+	}
+	function fineStep(v : number, sp : DialSpec, dir : number) : number {
+		if (isSer(sp)) {
+			const x = dir < 0 ? v * 0.999999 : v
+			return Math.pow(10, Math.floor(Math.log10(x)) + (sp.type == 'vol' ? -2 : -1))
+		}
+		return sp.fine
+	}
+	function stepVal(v0 : number | null, sp : DialSpec, md : string, dir : number) : string {
+		let v = v0 == null ? sp.start : v0
+		if (!(v > 0) && isSer(sp)) v = sp.start
+		if (md == 'coarse') {
+			if (isSer(sp)) {
+				const s = ser(sp)
+				let nv = -1
+				if (dir > 0) {
+					for (let i = 0; i < s.length; i++) {
+						if (s[i] > v * (1 + 1e-9)) {
+							nv = s[i]
+							break
+						}
+					}
+					if (nv < 0) nv = s[s.length - 1]
+				} else {
+					for (let i = s.length - 1; i >= 0; i--) {
+						if (s[i] < v * (1 - 1e-9)) {
+							nv = s[i]
+							break
+						}
+					}
+					if (nv < 0) nv = s[0]
+				}
+				return p3(clamp(nv, sp))
+			}
+			const c = sp.coarse
+			const k = dir > 0 ? Math.floor(v / c + 1e-9) + 1 : Math.ceil(v / c - 1e-9) - 1
+			return fmt(clamp(k * c, sp), sp.fine)
+		}
+		const st = fineStep(v, sp, dir)
+		const n = Math.round((v + dir * st) / st) * st
+		return fmt(clamp(n, sp), st)
+	}
+	function labelsFor(v : number, sp : DialSpec) : string[] {
+		const out : string[] = []
+		if (isSer(sp)) {
+			const s = ser(sp)
+			let idx = 0
+			for (let i = 0; i < s.length; i++) {
+				if (s[i] <= v * (1 + 1e-9)) idx = i
+			}
+			for (let k = -8; k <= 8; k++) {
+				const j = idx + k
+				out.push(j >= 0 && j < s.length && s[j] >= sp.min && s[j] <= sp.max ? p3(s[j]) : '')
+			}
+		} else {
+			const c = sp.coarse
+			const a = Math.floor(v / c + 1e-9) * c
+			for (let k = -8; k <= 8; k++) {
+				const x = a + k * c
+				out.push(x >= sp.min - 1e-9 && x <= sp.max + 1e-9 ? fmt(x, sp.fine) : '')
+			}
+		}
+		return out
+	}
+
+	// —— 几何 ——
+	function dist(x : number, y : number) : number {
+		const dx = x - CX, dy = y - cy.value
+		return Math.sqrt(dx * dx + dy * dy)
+	}
+	function zone(d : number) : string {
+		return d < R2 ? 'save' : (d <= R1 ? 'fine' : 'coarse')
+	}
+	function buzz(strong : boolean) {
+		try {
+			uni.vibrateShort({ type: strong ? 'medium' : 'light' } as VibrateShortOptions)
+		} catch (e) { }
+	}
+
+	function finish(commit : boolean) {
+		emit('close', commit)
+	}
+
+	function beginDrag(hasPoint : boolean, x : number, y : number) {
+		drag = true
+		moved = false
+		hasLast = false
+		if (hasPoint) {
+			startSet = true
+			downX = x
+			downY = y
+			armed = zone(dist(x, y)) != 'save'
+		} else {
+			startSet = false
+			armed = false
+		}
+	}
+
+	function valStr() : string {
+		return props.value
+	}
+
+	function handleMove(x : number, y : number) {
+		if (!drag) return
+		const d = dist(x, y)
+		const z = zone(d)
+		if (!startSet) {
+			startSet = true
+			downX = x
+			downY = y
+			armed = z != 'save'
+		}
+		if (Math.abs(x - downX) > 4 || Math.abs(y - downY) > 4) moved = true
+		if (z == 'save') {
+			// 进入 SAVE：锁定数值，不再随手指抖动变化
+			if (armed && !locked.value) {
+				buzz(true)
+				locked.value = true
+				acc.value = 0
+			}
+			hasLast = false
+			return
+		}
+		armed = true
+		if (locked.value) {
+			locked.value = false
+			acc.value = 0
+			hasLast = false
+		}
+		if (!hasLast) {
+			hasLast = true
+			lastX = x
+			lastY = y
+			if (z != mode.value) {
+				mode.value = z
+				acc.value = 0
+			}
+			return
+		}
+		const px = lastX, py = lastY
+		lastX = x
+		lastY = y
+		// 只取沿圆周（切向）的位移作为旋转；朝圆心方向的移动（去 SAVE）不改变数值
+		let rx = x - CX, ry = y - cy.value
+		let rl = Math.sqrt(rx * rx + ry * ry)
+		if (rl == 0) rl = 1
+		rx /= rl
+		ry /= rl
+		const mx = x - px, my = y - py
+		const rad = mx * rx + my * ry
+		const tan = -mx * ry + my * rx
+		if (Math.abs(tan) < 1.2 * Math.abs(rad)) return
+		let a = (z == mode.value ? acc.value : 0) + tan / (z == 'coarse' ? PXC : PXF)
+		const sp = props.spec
+		const s0 = valStr()
+		let s = s0
+		let v = num(s)
+		let changed = false
+		let guard = 0
+		while (a >= 1 && guard < 40) {
+			s = stepVal(v, sp, z, 1)
+			v = num(s)
+			a -= 1
+			changed = true
+			guard++
+		}
+		while (a <= -1 && guard < 40) {
+			s = stepVal(v, sp, z, -1)
+			v = num(s)
+			a += 1
+			changed = true
+			guard++
+		}
+		if (changed && s != s0) {
+			emit('change', s)
+			buzz(false)
+		}
+		acc.value = a
+		mode.value = z
+	}
+
+	function handleUp(x : number, y : number) {
+		if (!drag) return
+		drag = false
+		hasLast = false
+		const d = dist(x, y)
+		const z = zone(d)
+		// 1) 锁定后在 SAVE 抬起 → 保存关闭
+		if (z == 'save' && locked.value) {
+			finish(true)
+			return
+		}
+		// 2) 保留状态下轻点 SAVE → 保存关闭
+		if (z == 'save' && sticky.value && !moved) {
+			finish(true)
+			return
+		}
+		// 3) 长按后第一次抬手不在 SAVE → 保留圆盘继续调
+		if (!sticky.value) {
+			sticky.value = true
+			acc.value = 0
+			locked.value = false
+			return
+		}
+		// 4) 保留状态下轻点圆盘外 → 不保存关闭
+		const inBubble = x < CX - 246 && Math.abs(y - cy.value) < 70
+		if (!moved && d > R0 + 4 && !inBubble) {
+			finish(false)
+			return
+		}
+		acc.value = 0
+		locked.value = false
+	}
+
+	function handleCancel() {
+		drag = false
+		hasLast = false
+		sticky.value = true
+		acc.value = 0
+		locked.value = false
+	}
+
+	// 自身的触摸（保留状态下继续调节）
+	function onDown(e : UniTouchEvent) {
+		if (e.touches.length == 0) return
+		const t = e.touches[0]
+		beginDrag(true, t.clientX, t.clientY)
+	}
+	function onMove(e : UniTouchEvent) {
+		if (e.touches.length == 0) return
+		const t = e.touches[0]
+		handleMove(t.clientX, t.clientY)
+	}
+	function onUp(e : UniTouchEvent) {
+		if (e.changedTouches.length == 0) return
+		const t = e.changedTouches[0]
+		handleUp(t.clientX, t.clientY)
+	}
+	function onCancel(ev : UniTouchEvent) {
+		handleCancel()
+	}
+	function noop(ev : UniTouchEvent) { }
+	function saveBtn() {
+		finish(true)
+	}
+
+	// 长按唤出时，手指仍按在输入框上：由页面把后续触摸转发进来
+	function extMove(x : number, y : number) {
+		handleMove(x, y)
+	}
+	function extUp(x : number, y : number) {
+		handleUp(x, y)
+	}
+	function extCancel() {
+		handleCancel()
+	}
+	defineExpose({ extMove, extUp, extCancel })
+
+	// —— 渲染数据 ——
+	const curVal = computed(() : number => {
+		const v = num(props.value)
+		return v == null ? props.spec.start : v
+	})
+
+	const labels = computed(() : Label[] => {
+		const coarse = mode.value == 'coarse'
+		const accO = coarse ? acc.value * TC : 0
+		const lab = labelsFor(curVal.value, props.spec)
+		const out : Label[] = []
+		for (let k = -8; k <= 8; k++) {
+			const a = 180 - k * TC + accO
+			const r = a * Math.PI / 180
+			const lx = CX + RL * Math.cos(r)
+			const ly = cy.value + RL * Math.sin(r)
+			const on = k == 0 && Math.abs(accO) < TC / 2
+			const op = Math.max(0, 1 - Math.abs(a - 180) / 82)
+			out.push({ t: lab[k + 8], x: lx - 32, y: ly - 10, op: op, on: on, bg: on ? '#252C32' : 'transparent' } as Label)
+		}
+		return out
+	})
+
+	function tick(a : number, ri : number, ro : number, major : boolean) : Tick {
+		const r = a * Math.PI / 180
+		const c = Math.cos(r), s = Math.sin(r)
+		return { x0: CX + ri * c, y0: cy.value + ri * s, x1: CX + ro * c, y1: cy.value + ro * s, op: Math.max(0, 1 - Math.abs(a - 180) / 88), major: major } as Tick
+	}
+
+	function draw() {
+		const coarse = mode.value == 'coarse'
+		const accO = coarse ? acc.value * TC : 0
+		const accI = coarse ? 0 : acc.value * TF
+		const a = cvA.value
+		if (a != null) {
+			const ctx = a.getDrawableContext()
+			if (ctx != null) {
+				ctx.reset()
+				ctx.lineWidth = 2
+				ctx.lineCap = 'butt'
+				for (let k = -8; k <= 8; k++) {
+					const t = tick(180 - k * TC + accO, R0 - 13, R0 - 3, false)
+					if (t.op <= 0) continue
+					ctx.strokeStyle = 'rgba(122,131,138,' + t.op.toFixed(3) + ')'
+					ctx.beginPath()
+					ctx.moveTo(t.x0, t.y0)
+					ctx.lineTo(t.x1, t.y1)
+					ctx.stroke()
+				}
+				ctx.update()
+			}
+		}
+		const b = cvB.value
+		if (b != null) {
+			const ctx = b.getDrawableContext()
+			if (ctx != null) {
+				ctx.reset()
+				ctx.lineWidth = 2
+				ctx.lineCap = 'butt'
+				const v = curVal.value
+				const fs = fineStep(v, props.spec, 1)
+				const base = Math.round(v / fs)
+				for (let j = -16; j <= 16; j++) {
+					const major = ((base + j) % 5 + 5) % 5 == 0
+					const t = tick(180 - j * TF + accI, major ? R1 - 17 : R1 - 10, R1 - 3, major)
+					if (t.op <= 0) continue
+					ctx.strokeStyle = major ? 'rgba(174,180,184,' + t.op.toFixed(3) + ')' : 'rgba(90,99,107,' + t.op.toFixed(3) + ')'
+					ctx.beginPath()
+					ctx.moveTo(t.x0, t.y0)
+					ctx.lineTo(t.x1, t.y1)
+					ctx.stroke()
+				}
+				// 指针：横线 + 三角
+				ctx.fillStyle = 'rgba(110,168,245,0.55)'
+				ctx.fillRect(CX - R0, cy.value - 1, R0 - R2, 2)
+				ctx.fillStyle = '#6EA8F5'
+				ctx.beginPath()
+				ctx.moveTo(CX - 246, cy.value - 7)
+				ctx.lineTo(CX - 236, cy.value)
+				ctx.lineTo(CX - 246, cy.value + 7)
+				ctx.closePath()
+				ctx.fill()
+				ctx.update()
+			}
+		}
+	}
+
+	watch([acc, mode, () => props.value, cy], () => {
+		draw()
+	})
+
+	onMounted(() => {
+		if (props.dragging) beginDrag(false, 0, 0)
+		else sticky.value = true
+		setTimeout(() => {
+			draw()
+		}, 0)
+	})
+
+	const cvStyle = computed(() : string => 'width:' + W + 'px;height:' + H + 'px;')
+
+	// 设计稿用「0 0 0 1px」阴影画圆盘描边；原生端多重阴影不可靠，改用 1px 边框（圆盘外扩 1px），模糊阴影单独一层
+	function discStyle(r : number, bg : string, ring : string, shadow : string) : string {
+		const R = r + 1
+		return 'left:' + (CX - R) + 'px;top:' + (cy.value - R) + 'px;width:' + (2 * R) + 'px;height:' + (2 * R) + 'px;border-radius:' + R + 'px;background-color:' + bg + ';border:1px solid ' + ring + ';' + (shadow.length > 0 ? 'box-shadow:' + shadow + ';' : '')
+	}
+	const disc0Style = computed(() : string => discStyle(R0, mode.value == 'coarse' && !locked.value ? '#252C32' : '#1A1F23', '#2E3439', '-12px 0 40px rgba(0, 0, 0, 0.35)'))
+	const disc1Style = computed(() : string => discStyle(R1, mode.value != 'coarse' && !locked.value ? '#252C32' : '#16191B', '#2E3439', ''))
+	const disc2Style = computed(() : string => discStyle(R2, locked.value ? '#1F5FAD' : '#0F1113', locked.value ? '#6EA8F5' : '#2E3439', locked.value ? '0 0 0 5px rgba(110, 168, 245, 0.28)' : ''))
+
+	const saveFg = computed(() : string => locked.value ? '#FFFFFF' : '#9CC3F7')
+	const labelLine = computed(() : string => props.unit.length > 0 ? props.label + ' · ' + props.unit : props.label)
+	const shown = computed(() : string => props.value.length > 0 ? props.value : '—')
+	const modeText = computed(() : string => {
+		if (locked.value) return '已锁定'
+		if (mode.value == 'coarse') return '粗调'
+		const sp = props.spec
+		const st = isSer(sp) ? p3(fineStep(curVal.value, sp, 1)) : fmt(sp.fine, sp.fine)
+		return '微调 ±' + st
+	})
+</script>
+
+<style>
+	.root {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		overflow: hidden;
+	}
+
+	.dim {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(15, 17, 19, 0.46);
+	}
+
+	.disc {
+		position: absolute;
+	}
+
+	.cv {
+		position: absolute;
+		left: 0;
+		top: 0;
+	}
+
+	.lab {
+		position: absolute;
+		width: 64px;
+		height: 20px;
+		border-radius: 4px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.lab-t {
+		font-family: px4;
+		font-size: 12px;
+		line-height: 20px;
+		color: #AEB4B8;
+		text-align: center;
+	}
+
+	.lab-on {
+		font-family: px6;
+		color: #FFFFFF;
+	}
+
+	.save {
+		position: absolute;
+		width: 60px;
+		height: 84px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.lock {
+		width: 16px;
+		height: 16px;
+		margin-bottom: 3px;
+	}
+
+	.save-t {
+		font-family: px6;
+		font-size: 15px;
+		line-height: 21px;
+		letter-spacing: 1.5px;
+	}
+
+	.save-s {
+		margin-top: 3px;
+		font-family: ns4;
+		font-size: 11px;
+		line-height: 16px;
+	}
+
+	.bubble {
+		position: absolute;
+		left: 16px;
+		width: 152px;
+		padding: 12px 12px 10px 12px;
+		border-radius: 16px;
+		background-color: #FFFFFF;
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+	}
+
+	.b-label {
+		font-family: ns4;
+		font-size: 12px;
+		line-height: 17px;
+		color: #4F555A;
+		lines: 1;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	.b-val {
+		margin-top: 0.45px;
+		font-family: px5;
+		font-size: 26px;
+		line-height: 37px;
+		margin-bottom: -3.55px;
+		letter-spacing: -0.5px;
+		color: #16191B;
+		white-space: nowrap;
+	}
+
+	.b-res {
+		margin-top: 4px;
+		font-family: ns5;
+		font-size: 13px;
+		line-height: 19px;
+		color: #1F5FAD;
+		white-space: nowrap;
+	}
+
+	.b-mode {
+		margin-top: 8px;
+		padding-top: 8px;
+		border-top: 1px solid #E6E8E3;
+		font-family: ns4;
+		font-size: 12px;
+		line-height: 17.4px;
+		color: #4F555A;
+	}
+
+	.b-mode-on {
+		font-family: ns7;
+		color: #1F5FAD;
+	}
+</style>

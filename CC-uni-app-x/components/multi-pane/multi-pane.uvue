@@ -1,0 +1,1173 @@
+<template>
+	<view ref="paneRef" class="pane">
+		<scroll-view ref="scrollerRef" class="scroller" direction="vertical" :show-scrollbar="false" :scroll-top="scrollTo" :scroll-with-animation="true" @scroll="onScroll">
+			<view class="content" :style="{ paddingTop: topPad + 'px' }">
+				<view class="header">
+					<text class="h1">多组分配制</text>
+				</view>
+
+				<!-- 配方 -->
+				<view class="card mt14">
+					<text class="lbl">配方名称</text>
+					<view :class="['fld', 'mt10', focus == 'name' ? 'fld-on' : '']">
+						<input class="inp-name" :value="name" @input="setName(($event as UniInputEvent).detail.value)" @focus="focus = 'name'" @blur="blurField('name')" />
+					</view>
+					<text class="lbl mt14">最终体积</text>
+					<view class="row mt10">
+						<view :class="['fld', 'fld-vol', focus == 'vol' ? 'fld-on' : '']">
+							<input :focus="focus == 'vol'" class="inp-vol" type="digit" :value="vol" @input="setVol(($event as UniInputEvent).detail.value)" @focus="focus = 'vol'" @blur="blurField('vol')" />
+							<text class="u13 ml6">mL</text>
+							<view v-if="focus != 'vol'" class="lp-cover" @touchstart="lpStart('vol', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('vol')"></view>
+						</view>
+						<view v-for="(fv, i) in VOLS" :key="i" :class="['chip', 'chip52', volNum == fv ? 'chip-on' : '']" @click="setVol(fv.toFixed(0))">
+							<text :class="['chip-t', volNum == fv ? 'chip-t-on' : '']">{{ fv.toFixed(0) }}</text>
+						</view>
+					</view>
+				</view>
+
+				<!-- 组分 -->
+				<view class="card card-rows mt14">
+					<view class="row jsb aic rows-head">
+						<text class="h2">{{ '组分 ' }}<text class="cnt">{{ calc.rows.length.toFixed(0) }}</text></text>
+						<view class="bal" @click="cyclePrec">
+							<text class="bal-t">天平</text>
+							<text class="bal-s ml6">{{ precText + ' g' }}</text>
+							<text class="bal-m ml6">{{ '· 最小 ' + calc.mMinText + ' g' }}</text>
+						</view>
+					</view>
+					<view v-for="(r, idx) in calc.rows" :key="r.id" :class="['li', idx == 0 ? 'li-first' : '']">
+						<view class="row aic">
+							<view :class="['fld', 'fld-f', focus == 'f' + r.id ? 'fld-on' : '']">
+								<input class="inp15" :focus="focus == 'f' + r.id" :value="r.f" placeholder="化学式" placeholder-class="ph" @input="setRowF(r.id, ($event as UniInputEvent).detail.value)" @focus="focus = 'f' + r.id" @blur="blurField('f' + r.id)" />
+							</view>
+							<view :class="['fld', 'fld-c', 'ml6', focus == 'c' + r.id ? 'fld-on' : '']">
+								<input :focus="focus == 'c' + r.id" class="inp15 inp-r" type="digit" :value="r.c" placeholder="浓度" placeholder-class="ph" @input="setRowC(r.id, ($event as UniInputEvent).detail.value)" @focus="focus = 'c' + r.id" @blur="blurField('c' + r.id)" />
+								<view v-if="focus != 'c' + r.id" class="lp-cover" @touchstart="lpStart('row:' + r.id, $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('c' + r.id)"></view>
+								<unit-select class="ml4" :value="r.u" :ids="MIDS" :labels="MLABELS" :width="75" :small="true" @change="(id : string) => setRowU(r.id, id)"></unit-select>
+							</view>
+							<view class="rm ml6" @click="removeRow(r.id)">
+								<image class="ico18" src="/static/icons/close-62686C.svg"></image>
+							</view>
+						</view>
+						<view class="row jsb aic line2">
+							<view class="row aic f1 col0">
+								<view v-for="(mk, mi) in r.marks" :key="mi" class="mk">
+									<image class="tri9" :src="'/static/icons/tri-' + mk.c + '.svg'"></image>
+									<text class="mk-t" :style="{ color: '#' + mk.c }">{{ mk.no }}</text>
+								</view>
+								<text class="cap" :style="{ color: r.capColor }">{{ r.caption }}</text>
+							</view>
+							<view class="row aic ml10">
+								<view v-if="r.limited" class="lim">
+									<text class="lim-t">称量受限</text>
+								</view>
+								<text class="mass ml8" :style="{ color: r.massColor }">{{ r.massText }}</text>
+								<text class="u13 ml8">g</text>
+							</view>
+						</view>
+					</view>
+					<view class="row add-row">
+						<view class="add-scan" @click="openScan">
+							<image class="ico20" src="/static/icons/scan-1F5FAD.svg"></image>
+							<text class="add-t ml6">扫描添加</text>
+						</view>
+						<view class="add-man ml8" @click="addRow">
+							<image class="ico18" src="/static/icons/plus-1F5FAD.svg"></image>
+							<text class="add-t ml6">手动添加</text>
+						</view>
+					</view>
+				</view>
+
+				<!-- 反应与相容性检查 -->
+				<view ref="checkRef" class="card mt14">
+					<view class="row jsb baseline">
+						<text class="h2">反应与相容性检查</text>
+						<text class="sum">{{ checkSummary }}</text>
+					</view>
+					<view v-if="calc.noWarn" class="row aic mt12">
+						<image class="ico20" src="/static/icons/check-1F5FAD.svg"></image>
+						<text class="ok-t ml8">未发现常见反应风险</text>
+					</view>
+					<view v-for="(w, wi) in calc.warns" :key="wi" class="art mt12" :style="{ backgroundColor: w.bg }">
+						<view class="row art-h">
+							<view class="art-mk">
+								<image class="tri10" :src="'/static/icons/tri-' + w.fgHex + '.svg'"></image>
+								<text class="art-no" :style="{ color: w.fg }">{{ w.no }}</text>
+							</view>
+							<view class="lv ml8" :style="{ backgroundColor: w.fg }">
+								<text class="lv-t">{{ w.level }}</text>
+							</view>
+							<text class="h3 ml8 f1" :style="{ color: w.fg }">{{ w.title }}</text>
+						</view>
+						<text v-if="w.pairs.length > 0" class="pairs mt6"><text v-for="(pr, pi) in w.pairRuns" :key="pi" :class="pr.cjk ? 'pairs-cn' : 'pairs-px'">{{ pr.t }}</text></text>
+						<text class="detail mt6">{{ w.detail }}</text>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+
+		<!-- 结果卡：点击滚到相容性检查 -->
+		<view class="dock" @click="goCheck">
+			<view class="dock-bg"></view>
+			<view class="row jsb aic">
+				<text class="d-head">{{ '称取 ' }}<text class="d-cnt">{{ calc.dockItems.length.toFixed(0) }}</text><text class="d-head">{{ ' 种 · 定容 ' }}</text><text class="d-vol">{{ calc.dockVol }}</text></text>
+				<view class="row aic">
+					<view v-if="calc.stockCount > 0" class="dtag dtag-warn">
+						<text class="dtag-t" style="color: #16191B;">{{ '称量受限 ' + calc.stockCount.toFixed(0) }}</text>
+					</view>
+					<view v-if="calc.warns.length > 0" class="dtag dtag-info ml6">
+						<text class="dtag-t" style="color: #F2B35A;">{{ '相容性 ' + calc.warns.length.toFixed(0) }}</text>
+					</view>
+					<image class="ico18 ml6" src="/static/icons/info-AEB4B8.svg"></image>
+				</view>
+			</view>
+			<scroll-view class="d-grid" direction="vertical" :show-scrollbar="false" :style="{ height: calc.gridH + 'px' }">
+				<view class="d-grid-in">
+					<view v-for="(pr, pi) in calc.dockRows" :key="pi" :class="['row', pi > 0 ? 'd-rgap' : '']">
+						<view v-for="(it, ii) in pr" :key="ii" :class="['d-item', ii > 0 ? 'd-cgap' : '']" :style="{ height: calc.dockRowH[pi] + 'px' }">
+							<view class="row aic f1 col0" :style="{ marginTop: (it.marks.length > 0 ? 2.5 : 1) + 'px' }">
+								<view v-for="(mk, mi) in it.marks" :key="mi" class="dmk">
+									<image class="tri8" :src="'/static/icons/tri-' + mk.c + '.svg'"></image>
+									<text class="dmk-t" :style="{ color: '#' + mk.c }">{{ mk.no }}</text>
+								</view>
+								<text class="d-f"><text v-for="(fr, fi) in it.fRuns" :key="fi" :class="fr.cjk ? 'd-f-cn' : 'd-f-px'">{{ fr.t }}</text></text>
+							</view>
+							<text class="d-m ml6" :style="{ color: it.c }">{{ it.m }}</text>
+						</view>
+					</view>
+				</view>
+			</scroll-view>
+			<view v-if="calc.dockHasWarn" class="row aic mt8">
+				<image class="ico15" src="/static/icons/warn-F2B35A.svg"></image>
+				<text class="d-warn ml6">{{ calc.dockWarn }}</text>
+			</view>
+		</view>
+
+		<nav-bar active="multi" :bottom="navBottom" @go="goTab"></nav-bar>
+
+		<scan-sheet v-if="scanOpen" class="overlay" kind="component" @apply="applyScan" @close="scanOpen = false"></scan-sheet>
+		<dial-knob v-if="dialOpen" ref="dialRef" class="overlay" :value="dialValue" :spec="dialSpec" :label="dialLabel" :unit="dialUnit"
+			:result="dialResult" :anchor-y="dialY" :dragging="dialDrag" @change="dialChange" @close="dialClose"></dial-knob>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { normF, pretty } from '@/common/chem.uts'
+	import { sig, num, fmtV } from '@/common/fmt.uts'
+	import { DialSpec, ScanValue, Run, runs, concSpec, volSpec } from '@/common/types.uts'
+	import { resolveFormula, Resolved } from '@/common/resolve.uts'
+	import { checkMix, Warn, CheckResult } from '@/common/compat.uts'
+	import { analyzeMix, llmCached, mixKey, MixComp, suggestEnabled } from '@/common/llm.uts'
+	import { DEMO } from '@/common/config.uts'
+	import { loadState, saveState } from '@/common/store.uts'
+	import { noSuggestTree } from '@/common/native.uts'
+
+	defineOptions({ styleIsolation: 'app' })
+
+	const emit = defineEmits(['go'])
+
+	type Row = { id : number, f : string, c : string, u : string }
+	type Mark = { no : string, c : string } // c = 颜色 hex（不带 #）
+	type RowOut = {
+		id : number
+		n : number
+		f : string
+		c : string
+		u : string
+		caption : string
+		capColor : string
+		limited : boolean
+		massText : string
+		massColor : string
+		marks : Mark[]
+		key : string // 解析后的化学式（normF）
+	}
+	type WarnOut = {
+		no : string
+		level : string
+		title : string
+		detail : string
+		pairs : string
+		members : string[]
+		fg : string
+		fgHex : string
+		bg : string
+		pairRuns : Run[]
+	}
+	type DockItem = { f : string, m : string, c : string, marks : Mark[], fRuns : Run[] }
+	type MultiOut = {
+		rows : RowOut[]
+		mMinText : string
+		warns : WarnOut[]
+		noWarn : boolean
+		stockCount : number
+		dockItems : DockItem[]
+		dockRows : DockItem[][]
+		dockRowH : number[]
+		gridH : number
+		dockVol : string
+		dockHasWarn : boolean
+		dockWarn : string
+		comps : MixComp[]
+		rules : Warn[]
+	}
+
+	const MIDS = ['mM', 'M', 'gL', 'pct']
+	const MLABELS = ['mmol/L', 'mol/L', 'g/L', '% w/v']
+	const MMOLAR = [0.000001, 0.001, 0, 0]
+	const MMASS = [0, 0, 0.001, 0.01]
+	const PRECS = [0.1, 0.01, 0.001, 0.0001]
+	const PREC_LABELS = ['0.1', '0.01', '0.001', '0.0001']
+	const PREC_DEC = [1, 2, 3, 4]
+	const VOLS = [100, 250, 500, 1000]
+	const TOL = 0.01
+	const LV_FG = ['#A3261B', '#8A4B00', '#1F5FAD']
+	const LV_BG = ['#FBE6E2', '#FCEFD9', '#E3ECF7']
+	const MARK_LIGHT = ['A3261B', '8A4B00', '1F5FAD']
+	const MARK_DARK = ['FF8A7A', 'F2B35A', '8CB8F2']
+
+	function lvIdx(l : string) : number {
+		return l == '高' ? 0 : (l == '中' ? 1 : 2)
+	}
+
+	const win = uni.getWindowInfo()
+	const topPad = Math.max(56, win.statusBarHeight + 9)
+	const navBottom = Math.max(26, win.safeAreaInsets.bottom)
+
+	const name = ref('')
+	const vol = ref('')
+	const prec = ref(0.001)
+	const rows = ref<Row[]>([])
+	let nextId = 1
+	const scanOpen = ref(false)
+	const focus = ref('')
+	const paneRef = ref<UniElement | null>(null)
+
+	function newRow(f : string, c : string, u : string) : Row {
+		const r : Row = { id: nextId, f: f, c: c, u: u }
+		nextId++
+		return r
+	}
+
+	if (DEMO) {
+		name.value = 'DPBS（含 Ca²⁺、Mg²⁺）'
+		vol.value = '1000'
+		rows.value = [newRow('NaCl', '137', 'mM'), newRow('KCl', '2.7', 'mM'), newRow('Na2HPO4', '8.1', 'mM'), newRow('KH2PO4', '1.47', 'mM'), newRow('CaCl2', '0.9', 'mM'), newRow('MgCl2·6H2O', '0.49', 'mM')]
+	} else {
+		const s = loadState('multi')
+		if (s != null) {
+			name.value = s.getString('name', '')
+			vol.value = s.getString('vol', '')
+			prec.value = s.getNumber('d', 0.001)
+			const arr = s.getArray<UTSJSONObject>('rows')
+			if (arr != null) {
+				const list : Row[] = []
+				for (let i = 0; i < arr.length; i++) list.push(newRow(arr[i].getString('f', ''), arr[i].getString('c', ''), arr[i].getString('u', 'mM')))
+				rows.value = list
+			}
+		}
+		if (rows.value.length == 0) rows.value = [newRow('', '', 'mM')]
+	}
+
+	function persist() {
+		if (DEMO) return
+		const arr : UTSJSONObject[] = []
+		const rs = rows.value
+		for (let i = 0; i < rs.length; i++) arr.push({ f: rs[i].f, c: rs[i].c, u: rs[i].u } as UTSJSONObject)
+		saveState('multi', { name: name.value, vol: vol.value, d: prec.value, rows: arr } as UTSJSONObject)
+	}
+
+	function setName(v : string) {
+		name.value = v
+		persist()
+	}
+	function setVol(v : string) {
+		vol.value = v
+		persist()
+	}
+	function findRow(id : number) : Row | null {
+		const rs = rows.value
+		for (let i = 0; i < rs.length; i++) {
+			if (rs[i].id == id) return rs[i]
+		}
+		return null
+	}
+	function setRowF(id : number, v : string) {
+		const r = findRow(id)
+		if (r != null) r.f = v
+		persist()
+	}
+	function setRowC(id : number, v : string) {
+		const r = findRow(id)
+		if (r != null) r.c = v
+		persist()
+	}
+	function setRowU(id : number, u : string) {
+		const r = findRow(id)
+		if (r != null) r.u = u
+		persist()
+	}
+	function removeRow(id : number) {
+		rows.value = rows.value.filter((r : Row) : boolean => r.id != id)
+		persist()
+	}
+	function addRow() {
+		const r = newRow('', '', 'mM')
+		rows.value = rows.value.concat([r])
+		persist()
+		setTimeout(() => {
+			noSuggestTree(paneRef.value)
+			focus.value = 'f' + r.id
+		}, 50)
+	}
+	function cyclePrec() {
+		const i = PRECS.indexOf(prec.value)
+		prec.value = PRECS[(i + 1) % PRECS.length]
+		persist()
+	}
+	function goTab(t : string) {
+		emit('go', t)
+	}
+	function openScan() {
+		uni.hideKeyboard()
+		scanOpen.value = true
+	}
+	function applyScan(v : ScanValue) {
+		scanOpen.value = false
+		rows.value = rows.value.concat([newRow(v.formula.length > 0 ? v.formula : v.name, '', 'mM')])
+		persist()
+		setTimeout(() => {
+			noSuggestTree(paneRef.value)
+		}, 100)
+	}
+
+	const precText = computed(() : string => PREC_LABELS[Math.max(0, PRECS.indexOf(prec.value))])
+	const volNum = computed(() : number => {
+		const v = num(vol.value)
+		return v == null ? -1 : v
+	})
+
+	// —— LLM 复核 ——
+	const llmWarns = ref<Warn[] | null>(null)
+	const llmKey = ref('')
+	const llmBusy = ref(false)
+	let llmTimer = 0
+
+	const calc = computed(() : MultiOut => {
+		const Vq = num(vol.value)
+		const V : number = Vq == null ? 0 : Vq
+		const d = prec.value
+		const dec = PREC_DEC[Math.max(0, PRECS.indexOf(d))]
+		const mMin = 2 * d / TOL
+		let stockCount = 0
+		const outRows : RowOut[] = []
+		const formulas : string[] = []
+		const comps : MixComp[] = []
+		const rs = rows.value
+		for (let idx = 0; idx < rs.length; idx++) {
+			const r = rs[idx]
+			const ui = Math.max(0, MIDS.indexOf(r.u))
+			const res : Resolved = resolveFormula(r.f)
+			const M = res.status == 'ok' ? res.M : 0
+			const cq = num(r.c)
+			const c : number = cq == null ? 0 : cq
+			let m = -1
+			if (c > 0 && V > 0) {
+				if (MMOLAR[ui] > 0) m = M > 0 ? c * MMOLAR[ui] * V * M : -1
+				else m = c * MMASS[ui] * V
+			}
+			let cap = ''
+			let capColor = '#4F555A'
+			if (res.status == 'empty') {
+				cap = '输入化学式'
+				capColor = '#62686C'
+			} else if (res.status == 'pending') {
+				cap = '正在查询…'
+				capColor = '#62686C'
+			} else if (res.status == 'bad') {
+				cap = '化学式无法识别'
+				capColor = '#8A4B00'
+			} else {
+				const label = res.byName ? pretty(res.formula) : res.zh
+				cap = (label.length > 0 ? label + ' · ' : '') + M.toFixed(2) + ' g/mol'
+			}
+			const lim = m >= 0 && m < mMin
+			if (lim) {
+				const FS = [10, 20, 50, 100, 200, 500, 1000]
+				for (let k = 0; k < FS.length; k++) {
+					if (m * FS[k] * 100 / V >= mMin) {
+						stockCount++
+						break
+					}
+				}
+			}
+			const key = res.status == 'ok' ? normF(res.formula) : ''
+			outRows.push({
+				id: r.id, n: idx + 1, f: r.f, c: r.c, u: r.u, caption: cap, capColor: capColor, limited: lim,
+				massText: m >= 0 ? m.toFixed(dec) : '—', massColor: lim ? '#8A4B00' : '#16191B', marks: [] as Mark[], key: key
+			} as RowOut)
+			if (key.length > 0) {
+				formulas.push(res.formula)
+				comps.push({ formula: res.formula, input: r.f, name: res.zh, conc: r.c, unit: MLABELS[ui] } as MixComp)
+			}
+		}
+		// 相容性：离线规则；如有 LLM 复核结果（当前配方），用 LLM 的结果
+		const chk : CheckResult = checkMix(formulas)
+		let list : Warn[] = chk.list
+		const lw = llmWarns.value
+		if (lw != null && llmKey.value == mixKey(comps, vol.value)) list = lw
+		const warns : WarnOut[] = []
+		for (let i = 0; i < list.length; i++) {
+			const w = list[i]
+			const li = lvIdx(w.level)
+			warns.push({ no: (i + 1).toFixed(0), level: w.level, title: w.title, detail: w.detail, pairs: w.pairs, members: w.members, fg: LV_FG[li], fgHex: MARK_LIGHT[li], bg: LV_BG[li], pairRuns: runs(w.pairs) } as WarnOut)
+		}
+		function marks(key : string, dark : boolean) : Mark[] {
+			const out : Mark[] = []
+			if (key.length == 0) return out
+			for (let i = 0; i < warns.length; i++) {
+				if (warns[i].members.indexOf(key) >= 0) {
+					const li = lvIdx(warns[i].level)
+					out.push({ no: warns[i].no, c: dark ? MARK_DARK[li] : MARK_LIGHT[li] } as Mark)
+				}
+			}
+			return out
+		}
+		const items : DockItem[] = []
+		let bad = 0
+		for (let i = 0; i < outRows.length; i++) {
+			const r = outRows[i]
+			r.marks = marks(r.key, false)
+			if (normF(r.f).length == 0) continue
+			const ok = r.massText != '—'
+			if (!ok) bad++
+			const pf = pretty(r.f)
+			items.push({ f: pf, m: ok ? r.massText + ' g' : '—', c: r.limited ? '#F2B35A' : '#F3F4F1', marks: marks(r.key, true), fRuns: runs(pf) } as DockItem)
+		}
+		const dockRows : DockItem[][] = []
+		const dockRowH : number[] = []
+		let gridH = 9
+		for (let i = 0; i < items.length; i += 2) {
+			const pr : DockItem[] = [items[i]]
+			if (i + 1 < items.length) pr.push(items[i + 1])
+			const h = (items[i].marks.length > 0 || (i + 1 < items.length && items[i + 1].marks.length > 0)) ? 21.5 : 20
+			dockRows.push(pr)
+			dockRowH.push(h)
+			gridH += h + (i > 0 ? 5 : 0)
+		}
+		return {
+			rows: outRows, mMinText: mMin.toFixed(Math.max(dec, 1)), warns: warns, noWarn: warns.length == 0 && chk.known >= 2,
+			stockCount: stockCount, dockItems: items, dockRows: dockRows, dockRowH: dockRowH, gridH: Math.min(104, gridH),
+			dockVol: V > 0 ? sig(V, 6) + ' mL' : '—', dockHasWarn: bad > 0 || !(V > 0),
+			dockWarn: !(V > 0) ? '请输入最终体积' : bad.toFixed(0) + ' 个组分无法计算（化学式或浓度缺失）',
+			comps: comps, rules: chk.list
+		} as MultiOut
+	})
+
+	const checkSummary = computed(() : string => {
+		if (llmBusy.value) return 'AI 复核中…'
+		const c = calc.value
+		if (llmWarns.value != null && llmKey.value == mixKey(c.comps, vol.value)) return 'AI 复核 · 仅供参考'
+		return '仅供参考'
+	})
+
+	// 配方变化后（停顿 1.2 s）请求 LLM 复核；已缓存的配方直接用缓存
+	watch(calc, (c : MultiOut) => {
+		if (c.comps.length < 2) return
+		const key = mixKey(c.comps, vol.value)
+		if (key == llmKey.value && (llmWarns.value != null || llmBusy.value)) return
+		const cached = llmCached(key)
+		if (cached != null) {
+			llmKey.value = key
+			llmWarns.value = cached
+			return
+		}
+		if (!suggestEnabled()) return
+		clearTimeout(llmTimer)
+		llmTimer = setTimeout(() => {
+			const cur = calc.value
+			const k2 = mixKey(cur.comps, vol.value)
+			llmKey.value = k2
+			llmWarns.value = null
+			llmBusy.value = true
+			analyzeMix(cur.comps, vol.value, cur.rules, (list : Warn[] | null, err : string) => {
+				if (llmKey.value != k2) return
+				llmBusy.value = false
+				if (list != null) llmWarns.value = list
+			})
+		}, 1200)
+	})
+
+	// —— 点击结果卡：滚到「反应与相容性检查」——
+	const scrollerRef = ref<UniElement | null>(null)
+	const checkRef = ref<UniElement | null>(null)
+	const scrollTo = ref(0)
+	let curScroll = 0
+	function onScroll(e : UniScrollEvent) {
+		curScroll = e.detail.scrollTop
+	}
+	function goCheck() {
+		const sc = scrollerRef.value, ck = checkRef.value
+		if (sc == null || ck == null) return
+		const top = ck.getBoundingClientRect().top - sc.getBoundingClientRect().top + curScroll - 12
+		scrollTo.value = Math.max(0, top) + (scrollTo.value == Math.max(0, top) ? 0.01 : 0)
+	}
+
+	// —— 长按唤出旋钮 ——
+	const dialRef = ref<ComponentPublicInstance | null>(null)
+	const dialOpen = ref(false)
+	const dialKey = ref('')
+	const dialY = ref(430)
+	const dialDrag = ref(false)
+	let dialOrig = ''
+	let lpTimer = 0
+	let lpFired = false
+	let lpOn = false
+	let lpX = 0
+	let lpY = 0
+
+	function getVal(key : string) : string {
+		if (key == 'vol') return vol.value
+		const r = findRow(parseInt(key.substring(4)))
+		return r == null ? '' : r.c
+	}
+	function setVal(key : string, v : string) {
+		if (key == 'vol') setVol(v)
+		else setRowC(parseInt(key.substring(4)), v)
+	}
+	function openDial(key : string, y : number) {
+		uni.hideKeyboard()
+		focus.value = ''
+		dialOrig = getVal(key)
+		dialKey.value = key
+		dialY.value = y
+		dialDrag.value = true
+		dialOpen.value = true
+		try {
+			uni.vibrateShort({ type: 'medium' } as VibrateShortOptions)
+		} catch (e) { }
+	}
+	function lpStart(key : string, e : UniTouchEvent) {
+		if (e.touches.length == 0 || dialOpen.value) return
+		lpFired = false
+		const t = e.touches[0]
+		lpX = t.clientX
+		lpY = t.clientY
+		lpOn = true
+		clearTimeout(lpTimer)
+		lpTimer = setTimeout(() => {
+			if (lpOn) {
+				lpOn = false
+				lpFired = true
+				openDial(key, lpY)
+			}
+		}, 450)
+	}
+	// 只清除自己的聚焦状态：切换输入框时旧输入框的 blur 晚于新输入框的聚焦
+	function blurField(k : string) {
+		if (focus.value == k) focus.value = ''
+	}
+	function tapField(k : string) {
+		if (lpFired) {
+			lpFired = false
+			return
+		}
+		focus.value = k
+	}
+	function lpMove(e : UniTouchEvent) {
+		if (e.touches.length == 0) return
+		const t = e.touches[0]
+		if (dialOpen.value && dialDrag.value) {
+			if (e.cancelable) e.preventDefault()
+			e.stopPropagation()
+			dialRef.value?.$callMethod('extMove', t.clientX, t.clientY)
+			return
+		}
+		if (lpOn && (Math.abs(t.clientX - lpX) > 8 || Math.abs(t.clientY - lpY) > 8)) {
+			clearTimeout(lpTimer)
+			lpOn = false
+		}
+	}
+	function lpEnd(e : UniTouchEvent) {
+		clearTimeout(lpTimer)
+		lpOn = false
+		if (dialOpen.value && dialDrag.value) {
+			dialDrag.value = false
+			if (e.changedTouches.length > 0) {
+				const t = e.changedTouches[0]
+				dialRef.value?.$callMethod('extUp', t.clientX, t.clientY)
+			}
+		}
+	}
+	function lpCancel(ev : UniTouchEvent) {
+		clearTimeout(lpTimer)
+		lpOn = false
+		if (dialOpen.value && dialDrag.value) {
+			dialDrag.value = false
+			dialRef.value?.$callMethod('extCancel')
+		}
+	}
+
+	function dialRowIndex() : number {
+		const k = dialKey.value
+		if (!k.startsWith('row:')) return -1
+		const id = parseInt(k.substring(4))
+		const rs = calc.value.rows
+		for (let i = 0; i < rs.length; i++) {
+			if (rs[i].id == id) return i
+		}
+		return -1
+	}
+	const dialValue = computed(() : string => dialOpen.value ? getVal(dialKey.value) : '')
+	const dialLabel = computed(() : string => {
+		if (dialKey.value == 'vol') return '最终体积'
+		const i = dialRowIndex()
+		if (i < 0) return ''
+		const r = calc.value.rows[i]
+		const f = pretty(r.f)
+		return '组分 ' + (i + 1).toFixed(0) + ' · ' + (f.length > 0 ? f : '未填化学式')
+	})
+	const dialUnit = computed(() : string => {
+		if (dialKey.value == 'vol') return 'mL'
+		const i = dialRowIndex()
+		return i < 0 ? '' : MLABELS[Math.max(0, MIDS.indexOf(calc.value.rows[i].u))]
+	})
+	const dialSpec = computed(() : DialSpec => dialKey.value == 'vol' ? volSpec(1000) : concSpec(1))
+	const dialResult = computed(() : string => {
+		if (dialKey.value == 'vol') return ''
+		const i = dialRowIndex()
+		if (i < 0) return ''
+		const t = calc.value.rows[i].massText
+		return t != '—' ? '称取 ' + t + ' g' : ''
+	})
+	function dialChange(v : string) {
+		if (dialOpen.value) setVal(dialKey.value, v)
+	}
+	function dialClose(commit : boolean) {
+		if (!dialOpen.value) return
+		if (!commit) setVal(dialKey.value, dialOrig)
+		dialOpen.value = false
+		dialDrag.value = false
+	}
+</script>
+
+<style>
+	.pane {
+		flex: 1;
+		background-color: #F3F4F1;
+	}
+
+	.scroller {
+		flex: 1;
+	}
+
+	.content {
+		padding: 56px 16px 20px 16px;
+	}
+
+	.header {
+		padding: 0 4px;
+	}
+
+	.mt6 {
+		margin-top: 6px;
+	}
+
+	.mt8 {
+		margin-top: 8px;
+	}
+
+	.mt10 {
+		margin-top: 10px;
+	}
+
+	.mt12 {
+		margin-top: 12px;
+	}
+
+	.mt14 {
+		margin-top: 14px;
+	}
+
+	.ml4 {
+		margin-left: 4px;
+	}
+
+	.ml6 {
+		margin-left: 6px;
+	}
+
+	.ml8 {
+		margin-left: 8px;
+	}
+
+	.ml10 {
+		margin-left: 10px;
+	}
+
+	.col0 {
+		min-width: 0;
+	}
+
+	.baseline {
+		align-items: flex-end;
+	}
+
+	.ph {
+		color: #757575;
+	}
+
+	.inp-name {
+		flex: 1;
+		height: 44px;
+		font-family: ns4;
+		font-size: 17px;
+		color: #16191B;
+	}
+
+	.fld-vol {
+		flex: 1;
+		height: 44px;
+		padding: 0 12px;
+	}
+
+	.inp-vol {
+		flex: 1;
+		height: 40px;
+		font-family: px5;
+		font-size: 17px;
+		color: #16191B;
+	}
+
+	.u13 {
+		font-family: px4;
+		font-size: 13px;
+		line-height: 19px;
+		color: #4F555A;
+	}
+
+	.chip52 {
+		flex: none;
+		width: 52px;
+		margin-left: 6px;
+	}
+
+	.card-rows {
+		padding: 16px 16px 12px 16px;
+	}
+
+	.rows-head {
+		padding-bottom: 8px;
+	}
+
+	.cnt {
+		font-family: px5;
+		font-size: 15px;
+		color: #4F555A;
+	}
+
+	.bal {
+		flex-direction: row;
+		align-items: center;
+		height: 36px;
+		padding: 0 10px;
+		border-radius: 8px;
+		border: 1px solid #C9CDC5;
+		background-color: #F3F4F1;
+	}
+
+	.bal-t {
+		font-family: ns4;
+		font-size: 12px;
+		line-height: 17px;
+		color: #16191B;
+	}
+
+	.bal-s {
+		font-family: px6;
+		font-size: 12px;
+		line-height: 17px;
+		color: #16191B;
+	}
+
+	.bal-m {
+		font-family: ns4;
+		font-size: 12px;
+		line-height: 17px;
+		color: #4F555A;
+	}
+
+	.li {
+		padding: 12px 0;
+		border-top: 1px solid #E6E8E3;
+	}
+
+	.li-first {
+		margin-top: 4px;
+	}
+
+	.fld-f {
+		flex: 1;
+		height: 44px;
+		padding: 0 10px;
+	}
+
+	.fld-c {
+		width: 146px;
+		height: 44px;
+		padding: 0 3px 0 8px;
+	}
+
+	.inp15 {
+		flex: 1;
+		height: 40px;
+		font-family: px4;
+		font-size: 15px;
+		color: #16191B;
+	}
+
+	.inp-r {
+		text-align: right;
+	}
+
+	.rm {
+		width: 36px;
+		height: 44px;
+		border-radius: 10px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.ico18 {
+		width: 18px;
+		height: 18px;
+	}
+
+	.ico15 {
+		width: 15px;
+		height: 15px;
+	}
+
+	.line2 {
+		margin-top: 8px;
+		min-height: 22px;
+	}
+
+	.mk {
+		flex-direction: row;
+		align-items: center;
+		margin-right: 6px;
+	}
+
+	.tri9 {
+		width: 9px;
+		height: 9px;
+	}
+
+	.mk-t {
+		margin-left: 2px;
+		font-family: px6;
+		font-size: 12px;
+		line-height: 17px;
+		margin-top: -2.5px;
+		margin-bottom: -2.5px;
+	}
+
+	.cap {
+		flex: 1;
+		font-family: ns4;
+		font-size: 13px;
+		line-height: 19px;
+		lines: 1;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	.lim {
+		padding: 2px 6px;
+		border-radius: 6px;
+		background-color: #FCEFD9;
+	}
+
+	.lim-t {
+		font-family: ns7;
+		font-size: 11px;
+		line-height: 16px;
+		color: #8A4B00;
+	}
+
+	.mass {
+		font-family: px6;
+		font-size: 17px;
+		line-height: 25px;
+	}
+
+	.add-row {
+		margin-top: 8px;
+	}
+
+	.add-scan {
+		flex: 1;
+		height: 48px;
+		border-radius: 12px;
+		background-color: #E3ECF7;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.add-man {
+		flex: 1;
+		height: 48px;
+		border-radius: 12px;
+		border: 1px dashed #A9AFA6;
+		flex-direction: row;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.add-t {
+		font-family: ns5;
+		font-size: 15px;
+		line-height: 21px;
+		color: #1F5FAD;
+	}
+
+	.sum {
+		font-family: ns4;
+		font-size: 12px;
+		line-height: 17px;
+		color: #62686C;
+	}
+
+	.ok-t {
+		font-family: ns4;
+		font-size: 14px;
+		line-height: 20px;
+		color: #1F5FAD;
+	}
+
+	.art {
+		border-radius: 12px;
+		padding: 12px 14px;
+	}
+
+	.art-h {
+		align-items: flex-start;
+	}
+
+	.art-mk {
+		flex-direction: row;
+		align-items: center;
+		margin-top: 4px;
+	}
+
+	.tri10 {
+		width: 10px;
+		height: 10px;
+	}
+
+	.art-no {
+		margin-left: 2px;
+		font-family: px6;
+		font-size: 13px;
+		line-height: 19px;
+		margin-top: -3px;
+		margin-bottom: -3px;
+	}
+
+	.lv {
+		margin-top: 2px;
+		padding: 2px 6px;
+		border-radius: 5px;
+	}
+
+	.lv-t {
+		font-family: ns7;
+		font-size: 11px;
+		line-height: 16px;
+		color: #FFFFFF;
+	}
+
+	.h3 {
+		font-family: ns7;
+		font-size: 15px;
+		line-height: 21.75px;
+	}
+
+	.pairs {
+		font-family: px4;
+		font-size: 12px;
+		line-height: 18px;
+		color: #4F555A;
+	}
+
+	.pairs-px {
+		font-family: px4;
+		font-size: 12px;
+		color: #4F555A;
+	}
+
+	.pairs-cn {
+		font-family: ns4;
+		font-size: 12px;
+		color: #4F555A;
+	}
+
+	.detail {
+		font-family: ns4;
+		font-size: 13px;
+		line-height: 20.8px;
+		color: #2C3134;
+	}
+
+	/* 结果卡 */
+	.dock {
+		margin: 0 10px 10px 10px;
+		padding: 12px 16px;
+		overflow: visible;
+	}
+
+	.dock-bg {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		border-radius: 18px;
+		background-color: #16191B;
+		/* 设计稿为 0 8px 24px rgba(22,25,27,.18)；Android 的模糊半径约定不同，按像素实测调成同样的阴影分布 */
+		box-shadow: 0 10px 36px rgba(22, 25, 27, 0.24);
+		pointer-events: none;
+	}
+
+	.d-head {
+		font-family: ns4;
+		font-size: 12px;
+		line-height: 21px;
+		color: #AEB4B8;
+		white-space: nowrap;
+	}
+
+	.d-cnt {
+		font-family: px4;
+		font-size: 12px;
+		color: #F3F4F1;
+	}
+
+	.d-vol {
+		font-family: px6;
+		font-size: 15px;
+		color: #F3F4F1;
+	}
+
+	.dtag {
+		padding: 0 7px;
+		border-radius: 5px;
+	}
+
+	.dtag-warn {
+		background-color: #F2B35A;
+	}
+
+	.dtag-info {
+		background-color: rgba(242, 179, 90, 0.16);
+	}
+
+	.dtag-t {
+		font-family: ns7;
+		font-size: 11px;
+		line-height: 18px;
+		white-space: nowrap;
+	}
+
+	.d-grid {
+		margin-top: 8px;
+		border-top: 1px solid #2E3439;
+	}
+
+	.d-grid-in {
+		padding-top: 8px;
+	}
+
+	.d-rgap {
+		margin-top: 5px;
+	}
+
+	.d-item {
+		flex: 1;
+		min-width: 0;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: flex-start;
+	}
+
+	.d-cgap {
+		margin-left: 16px;
+	}
+
+	.dmk {
+		flex-direction: row;
+		align-items: center;
+		margin-right: 4px;
+	}
+
+	.tri8 {
+		width: 8px;
+		height: 8px;
+	}
+
+	.dmk-t {
+		margin-left: 1px;
+		font-family: px6;
+		font-size: 11px;
+		line-height: 16px;
+		margin-top: -2.5px;
+		margin-bottom: -2.5px;
+	}
+
+	.d-f {
+		flex: 1;
+		font-family: px4;
+		font-size: 13px;
+		line-height: 19px;
+		color: #AEB4B8;
+		lines: 1;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	.d-f-px {
+		font-family: px4;
+		font-size: 13px;
+		color: #AEB4B8;
+	}
+
+	.d-f-cn {
+		font-family: ns4;
+		font-size: 13px;
+		color: #AEB4B8;
+	}
+
+	.d-m {
+		font-family: px5;
+		font-size: 14px;
+		line-height: 20px;
+		white-space: nowrap;
+	}
+
+	.d-warn {
+		font-family: ns4;
+		font-size: 12px;
+		line-height: 18px;
+		color: #F2B35A;
+	}
+
+	.overlay {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+	}
+</style>

@@ -1,0 +1,91 @@
+<template>
+	<view :class="['sel', small ? 'sel-s' : '']" :style="{ width: width + 'px' }" @touchstart.stop="noop" @click="open">
+		<text :class="small ? 'txt-s' : 'txt'"><text v-for="(r, i) in labelRuns" :key="i" :class="[small ? 'txt-s' : 'txt', r.cjk ? 'cn' : '']">{{ r.t }}</text></text>
+		<image :class="small ? 'chev-s' : 'chev'" :src="small ? '/static/icons/chevs-4F555A.svg' : '/static/icons/chev-4F555A.svg'"></image>
+	</view>
+</template>
+
+<script setup lang="uts">
+	// 设计稿中的原生 <select>：收起态按设计还原，点开用系统操作菜单选择
+	import { Run, runs } from '@/common/types.uts'
+
+	const props = defineProps({
+		value: { type: String, default: '' },
+		ids: { type: Array as PropType<string[]>, required: true },
+		labels: { type: Array as PropType<string[]>, required: true },
+		width: { type: Number, default: 92 },
+		small: { type: Boolean, default: false }
+	})
+	const emit = defineEmits(['change'])
+
+	const labelRuns = computed(() : Run[] => {
+		const i = props.ids.indexOf(props.value)
+		return runs(i >= 0 ? props.labels[i] : '')
+	})
+
+	function noop(ev : UniTouchEvent) { }
+
+	function open() {
+		uni.showActionSheet({
+			itemList: props.labels,
+			success: (res : ShowActionSheetSuccess) => {
+				const id = props.ids[res.tapIndex]
+				if (id != props.value) emit('change', id)
+			}
+		})
+	}
+</script>
+
+<style>
+	.sel {
+		height: 40px;
+		flex-direction: row;
+		align-items: center;
+		padding-left: 10px;
+		border: 1px solid #C9CDC5;
+		border-radius: 8px;
+		background-color: #F3F4F1;
+	}
+
+	.sel-s {
+		height: 36px;
+		padding-left: 7px;
+		border-radius: 7px;
+	}
+
+	.txt {
+		font-family: px5;
+		font-size: 14px;
+		line-height: 20px;
+		color: #16191B;
+		white-space: nowrap;
+	}
+
+	.txt-s {
+		font-family: px5;
+		font-size: 12px;
+		line-height: 17px;
+		color: #16191B;
+		white-space: nowrap;
+	}
+
+	.cn {
+		font-family: ns5;
+	}
+
+	.chev {
+		position: absolute;
+		right: 9px;
+		top: 13px;
+		width: 12px;
+		height: 12px;
+	}
+
+	.chev-s {
+		position: absolute;
+		right: 7px;
+		top: 12px;
+		width: 10px;
+		height: 10px;
+	}
+</style>

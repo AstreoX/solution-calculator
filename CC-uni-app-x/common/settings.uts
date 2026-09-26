@@ -1,0 +1,117 @@
+// 视觉模型（VLM）供应商设置：标签扫描 OCR 与多组分相容性建议共用，保存在本机
+// 首页右上角齿轮进入设置页修改；未填 API Key 时回退到 config.uts 里的配置
+
+import { VLM_DEFAULT_KEY } from './config.uts'
+
+export type VlmPreset = {
+	id : string
+	name : string
+	baseUrl : string
+	model : string
+}
+
+export type VlmSettings = {
+	preset : string
+	baseUrl : string
+	apiKey : string
+	model : string
+	ocrOn : boolean
+	suggestOn : boolean
+}
+
+// DeepSeek V4.1 Flash：OpenRouter 上为 deepseek/deepseek-v4.1-flash，DeepSeek 官方接口上为 deepseek-flash（均支持图片输入）
+export const PRESETS : VlmPreset[] = [
+	{ id: 'openrouter', name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', model: 'deepseek/deepseek-v4.1-flash' } as VlmPreset,
+	{ id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com', model: 'deepseek-flash' } as VlmPreset,
+	{ id: 'qwen', name: '通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-vl-max' } as VlmPreset,
+	{ id: 'zhipu', name: '智谱', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4v-plus' } as VlmPreset,
+	{ id: 'custom', name: '自定义', baseUrl: '', model: '' } as VlmPreset
+]
+
+const KEY = 'vlm-settings'
+
+function defaults() : VlmSettings {
+	return { preset: PRESETS[0].id, baseUrl: PRESETS[0].baseUrl, apiKey: VLM_DEFAULT_KEY, model: PRESETS[0].model, ocrOn: true, suggestOn: true } as VlmSettings
+}
+
+function load() : VlmSettings {
+	const d = defaults()
+	try {
+		const s = uni.getStorageSync(KEY)
+		if (s != null && typeof s == 'string' && (s as string).length > 0) {
+			const o = JSON.parseObject(s as string)
+			if (o != null) {
+				d.preset = o.getString('preset', d.preset)
+				d.baseUrl = o.getString('baseUrl', d.baseUrl)
+				d.apiKey = o.getString('apiKey', '')
+				d.model = o.getString('model', d.model)
+				d.ocrOn = o.getBoolean('ocrOn', true)
+				d.suggestOn = o.getBoolean('suggestOn', true)
+			}
+		}
+	} catch (e) { }
+	return d
+}
+
+export const vlm = reactive<VlmSettings>(load())
+
+export function saveVlm(v : VlmSettings) {
+	vlm.preset = v.preset
+	vlm.baseUrl = v.baseUrl.trim()
+	vlm.apiKey = v.apiKey.trim()
+	vlm.model = v.model.trim()
+	vlm.ocrOn = v.ocrOn
+	vlm.suggestOn = v.suggestOn
+	const o = { preset: vlm.preset, baseUrl: vlm.baseUrl, apiKey: vlm.apiKey, model: vlm.model, ocrOn: vlm.ocrOn, suggestOn: vlm.suggestOn } as UTSJSONObject
+	uni.setStorageSync(KEY, JSON.stringify(o))
+}
+
+export function vlmReady() : boolean {
+	return vlm.baseUrl.length > 0 && vlm.model.length > 0 && vlm.apiKey.length > 0
+}
+
+export function vlmChatUrl(base : string) : string {
+	return base.replace(/\/+$/, '') + '/chat/completions'
+}
+
+// DeepSeek 专有参数（thinking）只发给 DeepSeek，其他 OpenAI 兼容服务可能拒绝未知参数
+export function isDeepSeek(base : string) : boolean {
+	return base.indexOf('deepseek.com') >= 0
+}
+
+export function isOpenRouter(base : string) : boolean {
+	return base.indexOf('openrouter.ai') >= 0
+}
+
+// 按供应商附加推理 / JSON 输出参数：识别（ocr）关闭推理求快，建议（suggest）用低强度推理
+export function applyProviderParams(body : UTSJSONObject, base : string, purpose : string) {
+	if (isDeepSeek(base)) {
+		if (purpose == 'ocr') body.set('thinking', { type: 'disabled' } as UTSJSONObject)
+		else body.set('thinking', { type: 'enabled', reasoning_effort: 'low' } as UTSJSONObject)
+		body.set('response_format', { type: 'json_object' } as UTSJSONObject)
+	} else if (isOpenRouter(base)) {
+		if (purpose == 'ocr') body.set('reasoning', { enabled: false } as UTSJSONObject)
+		else body.set('reasoning', { effort: 'low' } as UTSJSONObject)
+		body.set('response_format', { type: 'json_object' } as UTSJSONObject)
+		body.set('provider', openRouterRouting())
+	}
+}
+
+// OpenRouter 路由：优先首字延迟（TTFT）最低的供应商，并把吞吐（TPS）低于 100 tok/s 的排到后面；
+// 只选支持本次全部参数（JSON 输出、推理开关）的供应商，失败时允许回退。
+// 实测（标签识别）：默认路由 TTFT≈2.6 s、总耗时≈4.8 s；此路由 TTFT≈1.5 s、≈400 tok/s、总耗时≈2.2 s
+export function openRouterRouting() : UTSJSONObject {
+	return {
+		sort: { by: 'latency', partition: 'none' } as UTSJSONObject,
+		preferred_min_throughput: { p50: 100 } as UTSJSONObject,
+		require_parameters: true,
+		allow_fallbacks: true
+	} as UTSJSONObject
+}
+
+export function providerHeaders(base : string, apiKey : string) : UTSJSONObject {
+	const h = { 'Content-Type': 'application/json' } as UTSJSONObject
+	if (apiKey.length > 0) h.set('Authorization', 'Bearer ' + apiKey)
+	if (isOpenRouter(base)) h.set('X-Title', 'Chemistry Calculator')
+	return h
+}

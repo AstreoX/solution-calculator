@@ -1,0 +1,29 @@
+{
+  "latest": {
+    "versionName": "1.0.1",
+    "versionCode": 101,
+    "minVersionCode": 0,
+    "date": "2026-09-27",
+    "size": 27425022,
+    "sha1": "0123456789abcdef0123456789abcdef01234567",
+    "notes": "· 扫描线覆盖整个取景框\n· 新增版本更新与公告",
+    "urls": [
+      "https://gitee.com/<用户名>/<仓库>/releases/download/v1.0.1/chemcalc-1.0.1.apk",
+      "https://github.com/<用户名>/<仓库>/releases/download/v1.0.1/chemcalc-1.0.1.apk"
+    ],
+    "page": "https://gitee.com/<用户名>/<仓库>/releases/tag/v1.0.1"
+  },
+  "notices": [
+    {
+      "id": "2026-09-27-welcome",
+      "title": "欢迎试用化学计算器",
+      "body": "有问题或建议可以在仓库的 Issues 里反馈。",
+      "date": "2026-09-27",
+      "level": "info",
+      "popup": true,
+      "minVersionCode": 0,
+      "maxVersionCode": 0,
+      "expires": ""
+    }
+  ]
+}

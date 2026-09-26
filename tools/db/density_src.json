@@ -1,0 +1,162 @@
+{
+  "HCl": {
+    "zh": "盐酸",
+    "T": 20,
+    "pts": [[0.5, 1.0007], [1, 1.0031], [2, 1.0081], [3, 1.013], [4, 1.0179], [5, 1.0228], [6, 1.0278], [7, 1.0327], [8, 1.0377], [9, 1.0426], [10, 1.0476], [12, 1.0576], [14, 1.0676], [16, 1.0777], [18, 1.0878], [20, 1.098], [22, 1.1083], [24, 1.1185], [26, 1.1288], [28, 1.1391], [30, 1.1492], [32, 1.1594], [34, 1.1693], [36, 1.1791], [38, 1.1886], [40, 1.1977]],
+    "source": "CRC Handbook of Chemistry and Physics, 85th ed. (2004), \"Concentrative Properties of Aqueous Solutions: Density, Refractive Index, Freezing Point Depression, and Viscosity\", pp. 8-58..8-84, 20 °C",
+    "urls": ["https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf", "https://en.wikipedia.org/wiki/Hydrochloric_acid", "https://www.handymath.com/cgi-bin/hcltble3.cgi?submit=Entry"],
+    "note": "Cross-check vs Perry's 8th ed. Table 2-59 (20 °C): 10 % 1.0474 vs 1.0476, 20 % 1.0980 vs 1.0980, 36 % 1.1789 vs 1.1791, 40 % 1.1980 vs 1.1977 (agreement within 0.0003); en.wikipedia physical-properties table (20 °C, 3 decimals) agrees. Density vs mass fraction was also checked against the CRC molarity column (c = 10·w·rho/M) for every row."
+  },
+  "H2SO4": {
+    "zh": "硫酸",
+    "T": 20,
+    "pts": [[0.5, 1.0016], [1, 1.0049], [2, 1.0116], [3, 1.0183], [4, 1.025], [5, 1.0318], [6, 1.0385], [7, 1.0453], [8, 1.0522], [9, 1.0591], [10, 1.0661], [12, 1.0802], [14, 1.0947], [16, 1.1094], [18, 1.1245], [20, 1.1398], [22, 1.1554], [24, 1.1714], [26, 1.1872], [28, 1.2031], [30, 1.2191], [32, 1.2353], [34, 1.2518], [36, 1.2685], [38, 1.2855], [40, 1.3028], [42, 1.3205], [44, 1.3386], [46, 1.357], [48, 1.3759], [50, 1.3952], [52, 1.4149], [54, 1.4351], [56, 1.4558], [58, 1.477], [60, 1.4987], [70, 1.6105], [80, 1.7272], [90, 1.8144], [92, 1.824], [94, 1.8312], [96, 1.8355], [98, 1.8361], [100, 1.8305]],
+    "source": "CRC Handbook of Chemistry and Physics, 85th ed. (2004), \"Concentrative Properties of Aqueous Solutions: Density, Refractive Index, Freezing Point Depression, and Viscosity\", pp. 8-58..8-84, 20 °C",
+    "urls": ["https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf", "https://wissen.science-and-fun.de/chemistry/chemistry/density-tables/density-of-sulfuric-acid-and-sulfur-trioxide/"],
+    "note": "Cross-check vs Perry's 8th ed. Table 2-103 (from ICT, 20 °C): 10 % 1.0661 vs 1.0661, 30 % 1.2185 vs 1.2191, 50 % 1.3951 vs 1.3952, 90 % 1.8144 vs 1.8144, 96 % 1.8355 vs 1.8355, 98 % 1.8361 vs 1.8361, 100 % 1.8305 vs 1.8305. Maximum in this table: 1.8361 at 98 % (Perry's 1 %-step table has its maximum 1.8364 at 97 %)."
+  },
+  "HNO3": {
+    "zh": "硝酸",
+    "T": 20,
+    "pts": [[0.5, 1.0009], [1, 1.0037], [2, 1.0091], [3, 1.0146], [4, 1.0202], [5, 1.0257], [6, 1.0314], [7, 1.037], [8, 1.0427], [9, 1.0485], [10, 1.0543], [12, 1.066], [14, 1.078], [16, 1.0901], [18, 1.1025], [20, 1.115], [22, 1.1277], [24, 1.1406], [26, 1.1536], [28, 1.1668], [30, 1.1801], [32, 1.1934], [34, 1.2068], [36, 1.2202], [38, 1.2335], [40, 1.2466], [45, 1.2783], [50, 1.31], [55, 1.3393], [60, 1.3667], [65, 1.3913], [68, 1.4048], [70, 1.4134], [75, 1.4337], [80, 1.4521], [85, 1.4686], [90, 1.4826], [95, 1.4932], [98, 1.5008], [100, 1.5129]],
+    "source": "CRC Handbook of Chemistry and Physics, 85th ed. (2004), \"Concentrative Properties of Aqueous Solutions: Density, Refractive Index, Freezing Point Depression, and Viscosity\", pp. 8-58..8-84, 20 °C (0.5-40 %); 45-100 % from Perry's 8th ed. Table 2-68 (ICT vol. 3 pp. 58-59), 20 °C column (subset of the 1 %-step table)",
+    "urls": ["https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf", "https://www.handymath.com/cgi-bin/nitrictble2.cgi?submit=Entry", "https://wissen.science-and-fun.de/chemistry/chemistry/density-tables/density-of-nitric-acid/", "https://de.wikipedia.org/wiki/Salpeters%C3%A4ure"],
+    "note": "Overlap agreement CRC vs Perry's/ICT (20 °C): 20 % 1.1150 vs 1.1150, 30 % 1.1801 vs 1.1800, 40 % 1.2466 vs 1.2463. Rauscher/Merck 20 °C table (Steffen's pages): rho 1.310 <-> 50.00 %, 1.390 <-> 64.74 %, 1.415 <-> 70.39 %, 1.513 <-> 100 % - consistent."
+  },
+  "H3PO4": {
+    "zh": "磷酸",
+    "T": 20,
+    "pts": [[0.5, 1.001], [1, 1.0038], [2, 1.0092], [3, 1.0146], [4, 1.02], [5, 1.0254], [6, 1.0309], [7, 1.0363], [8, 1.0418], [9, 1.0474], [10, 1.0531], [12, 1.0647], [14, 1.0765], [16, 1.0885], [18, 1.1009], [20, 1.1135], [22, 1.1263], [24, 1.1395], [26, 1.1528], [28, 1.1665], [30, 1.1804], [32, 1.1945], [34, 1.2089], [36, 1.2236], [38, 1.2385], [40, 1.2536], [45, 1.293], [50, 1.335], [55, 1.379], [60, 1.426], [65, 1.475], [70, 1.526], [75, 1.579], [80, 1.633], [85, 1.689], [90, 1.746], [92, 1.77], [94, 1.794], [96, 1.819], [98, 1.844], [100, 1.87]],
+    "source": "CRC Handbook of Chemistry and Physics, 85th ed. (2004), \"Concentrative Properties of Aqueous Solutions: Density, Refractive Index, Freezing Point Depression, and Viscosity\", pp. 8-58..8-84, 20 °C (0.5-40 %); 45-100 % from International Critical Tables vol. 3 (1928) p. 61, H3PO4 table, 20 °C row",
+    "urls": ["https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf", "https://archive.org/download/international-critical-tables_1928_3/international-critical-tables_1928_3.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf", "https://www.handymath.com/cgi-bin/phostble.cgi?submit=Entry", "https://wissen.science-and-fun.de/chemistry/chemistry/density-tables/density-of-phosphoric-acid/"],
+    "note": "Overlap agreement CRC vs ICT (20 °C): 10 % 1.0531 vs 1.0532, 20 % 1.1135 vs 1.1134, 30 % 1.1804 vs 1.1805, 40 % 1.2536 vs 1.254. ICT values above 30 % are given to 3 decimals. Rauscher/Merck 20 °C table (Steffen's pages) has the same 35-100 % values (e.g. 85 % 1.689, 100 % 1.870). Perry's Table 2-70 reproduces only a subset of this ICT table."
+  },
+  "CH3COOH": {
+    "zh": "乙酸",
+    "T": 20,
+    "pts": [[0.5, 0.9989], [1, 0.9996], [2, 1.0011], [3, 1.0025], [4, 1.0038], [5, 1.0052], [6, 1.0066], [7, 1.008], [8, 1.0093], [9, 1.0107], [10, 1.0121], [12, 1.0147], [14, 1.0174], [16, 1.02], [18, 1.0225], [20, 1.025], [22, 1.0275], [24, 1.0299], [26, 1.0323], [28, 1.0346], [30, 1.0369], [32, 1.0391], [34, 1.0413], [36, 1.0434], [38, 1.0454], [40, 1.0474], [50, 1.0562], [60, 1.0629], [70, 1.0673], [80, 1.068], [90, 1.0644], [92, 1.0629], [94, 1.0606], [96, 1.0578], [98, 1.0538], [100, 1.0477]],
+    "source": "CRC Handbook of Chemistry and Physics, 85th ed. (2004), \"Concentrative Properties of Aqueous Solutions: Density, Refractive Index, Freezing Point Depression, and Viscosity\", pp. 8-58..8-84, 20 °C",
+    "urls": ["https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf"],
+    "note": "Cross-check vs Perry's 8th ed. Table 2-109 (ICT, 20 °C): 10 % 1.0125 vs 1.0121, 50 % 1.0575 vs 1.0562, 80 % 1.0700 vs 1.0680, 100 % 1.0498 vs 1.0477 -> CRC is systematically 0.0004-0.0021 lower; ICT maximum 1.0700 at 78-80 %, CRC maximum 1.0680 at 80 %. CRC 100 % value (1.0477) is ~0.002 below the usual pure-acid value 1.049; kept as published (preferred source)."
+  },
+  "NH3": {
+    "zh": "氨水",
+    "T": 20,
+    "pts": [[0.5, 0.996], [1, 0.9938], [2, 0.9895], [3, 0.9853], [4, 0.9811], [5, 0.977], [6, 0.973], [7, 0.969], [8, 0.9651], [9, 0.9613], [10, 0.9575], [12, 0.9502], [14, 0.9431], [16, 0.9361], [18, 0.9294], [20, 0.9228], [22, 0.9164], [24, 0.9102], [26, 0.904], [28, 0.898], [30, 0.892]],
+    "source": "CRC Handbook of Chemistry and Physics, 85th ed. (2004), \"Concentrative Properties of Aqueous Solutions: Density, Refractive Index, Freezing Point Depression, and Viscosity\", pp. 8-58..8-84, 20 °C; w = mass % NH3",
+    "urls": ["https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf", "https://wissen.science-and-fun.de/chemistry/chemistry/density-tables/density-of-ammonia/"],
+    "note": "Cross-check vs Perry's 8th ed. Table 2-34 (ICT, 20 °C): 1 % 0.9939 vs 0.9938, 12 % 0.9501 vs 0.9502, 20 % 0.9229 vs 0.9228, 30 % 0.8920 vs 0.8920 (<=0.0001). 25 % lies between 24 % (0.9102) and 26 % (0.9040), i.e. ~0.907."
+  },
+  "NaOH": {
+    "zh": "氢氧化钠",
+    "T": 20,
+    "pts": [[0.5, 1.0039], [1, 1.0095], [2, 1.0207], [3, 1.0318], [4, 1.0428], [5, 1.0538], [6, 1.0648], [7, 1.0758], [8, 1.0869], [9, 1.0979], [10, 1.1089], [12, 1.1309], [14, 1.153], [15, 1.164], [16, 1.1751], [18, 1.1971], [20, 1.2192], [22, 1.2412], [24, 1.2631], [26, 1.2848], [28, 1.3064], [30, 1.3277], [32, 1.3488], [34, 1.3697], [36, 1.3901], [38, 1.4102], [40, 1.4299], [44, 1.4685], [48, 1.5065], [50, 1.5253]],
+    "source": "CRC Handbook of Chemistry and Physics, 85th ed. (2004), \"Concentrative Properties of Aqueous Solutions: Density, Refractive Index, Freezing Point Depression, and Viscosity\", pp. 8-58..8-84, 20 °C (0.5-40 %); 44-50 % from Perry's Chemical Engineers' Handbook 8th ed. Table 2-92 (ICT vol. 3 pp. 82-83), 20 °C column",
+    "urls": ["https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf", "https://www.handymath.com/cgi-bin/naohtble3.cgi?submit=Entry", "https://de.wikipedia.org/wiki/Natronlauge"],
+    "note": "Overlap agreement CRC vs Perry's (20 °C): 20 % 1.2192 vs 1.2191, 32 % 1.3488 vs 1.3490, 40 % 1.4299 vs 1.4300. de.wikipedia (Roempp) 50 % 1.524 vs 1.5253."
+  },
+  "KOH": {
+    "zh": "氢氧化钾",
+    "T": 15,
+    "pts": [[1, 1.0083], [2, 1.0175], [4, 1.0359], [6, 1.0544], [8, 1.073], [10, 1.0918], [12, 1.1108], [14, 1.1299], [16, 1.1493], [18, 1.1688], [20, 1.1884], [22, 1.2083], [24, 1.2285], [26, 1.2489], [28, 1.2695], [30, 1.2905], [35, 1.344], [40, 1.3991], [45, 1.4558], [50, 1.5143]],
+    "source": "International Critical Tables vol. 3 (1928) p. 86, KOH, d4 at 15 °C (subset of 1 %-step table; also Perry's 8th ed. Table 2-78)",
+    "urls": ["https://archive.org/download/international-critical-tables_1928_3/international-critical-tables_1928_3.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf", "https://www.oxy.com/siteassets/documents/chemicals/products/chlor-alkali/KOH-Handbook-2018-ed.pdf", "https://wissen.science-and-fun.de/chemistry/chemistry/density-tables/density-of-potassium-hydroxide/", "https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf"],
+    "note": "T = 15 °C (no reliable 20 °C table found). The CRC 20 °C KOH column (10 % 1.0873, 30 % 1.2813, 40 % 1.3881, 50 % 1.5024) is 0.3-0.8 % lower than ICT and than OxyChem Caustic Potash Handbook Table 1 (15.6 °C: 10 % 1.092, 30 % 1.292, 50 % 1.516 SG) and the Rauscher/Merck 20 °C table on Steffen's pages (1.090 <-> 9.96 %, 1.290 <-> 30.21 %, 1.510 <-> 49.95 %), far more than the 5 K temperature difference explains (~ -0.0003 to -0.0006 per K), so ICT 15 °C was used. Expect 20 °C values ~0.0015-0.003 lower."
+  },
+  "H2O2": {
+    "zh": "过氧化氢",
+    "T": 18,
+    "pts": [[1, 1.0022], [2, 1.0058], [4, 1.0131], [6, 1.0204], [8, 1.0277], [10, 1.0351], [12, 1.0425], [14, 1.0499], [16, 1.0574], [18, 1.0649], [20, 1.0725], [22, 1.0802], [24, 1.088], [26, 1.0959], [28, 1.104], [30, 1.1122], [35, 1.1327], [40, 1.1536], [45, 1.1749], [50, 1.1966], [55, 1.2188], [60, 1.2416], [65, 1.2652], [70, 1.2897], [75, 1.3149], [80, 1.3406], [85, 1.3667], [90, 1.3931], [95, 1.4197], [100, 1.4465]],
+    "source": "International Critical Tables vol. 3 (1928) p. 54, H2O2, d4 at 18 °C (Perry's 8th ed. Table 2-61 reproduces a subset)",
+    "urls": ["https://archive.org/download/international-critical-tables_1928_3/international-critical-tables_1928_3.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf", "https://active-oxygens.evonik.com/en/products-and-services/hydrogen-peroxide/general-information/physico-chemical-properties", "https://de.wikipedia.org/wiki/Wasserstoffperoxid", "https://en.wikipedia.org/wiki/Hydrogen_peroxide"],
+    "note": "T = 18 °C: no full-range 20 °C table found. 20 °C cross-check: Evonik (manufacturer) 30 % 1.111, 35 % 1.131, 50 % 1.195, 70 % 1.289, 100 % 1.450; de.wikipedia (Ullmann) 35 % 1.1312, 50 % 1.1953, 70 % 1.2886, 90 % 1.3920 -> ICT 18 °C values are 0.001-0.002 higher, as expected for 2 K. Exception: 100 % (ICT 1.4465 at 18 °C vs modern 1.450 at 20 °C) - the old ICT value for nearly pure H2O2 is ~0.005 low; use the >90 % end with caution."
+  },
+  "C2H5OH": {
+    "zh": "乙醇",
+    "T": 20,
+    "pts": [[0.5, 0.9973], [1, 0.9963], [2, 0.9945], [3, 0.9927], [4, 0.991], [5, 0.9893], [6, 0.9878], [7, 0.9862], [8, 0.9847], [9, 0.9833], [10, 0.9819], [12, 0.9792], [14, 0.9765], [16, 0.9739], [18, 0.9713], [20, 0.9687], [22, 0.966], [24, 0.9632], [26, 0.9602], [28, 0.9571], [30, 0.9539], [32, 0.9504], [34, 0.9468], [36, 0.9431], [38, 0.9392], [40, 0.9352], [42, 0.9311], [44, 0.9269], [46, 0.9227], [48, 0.9183], [50, 0.9139], [60, 0.8911], [70, 0.8676], [80, 0.8436], [90, 0.818], [92, 0.8125], [94, 0.807], [96, 0.8013], [98, 0.7954], [100, 0.7893]],
+    "source": "CRC Handbook of Chemistry and Physics, 85th ed. (2004), \"Concentrative Properties of Aqueous Solutions: Density, Refractive Index, Freezing Point Depression, and Viscosity\", pp. 8-58..8-84, 20 °C; w = mass % ethanol",
+    "urls": ["https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf", "https://en.wikipedia.org/wiki/Ethanol_(data_page)", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf"],
+    "note": "Cross-check vs en.wikipedia \"Ethanol (data page)\" (Lange 1967, d at 20 °C): 10 % 0.98187 vs 0.9819, 50 % 0.91384 vs 0.9139, 90 % 0.81797 vs 0.8180, 100 % 0.78934 vs 0.7893; Perry's Table 2-112 50 % 0.91384."
+  },
+  "HClO4": {
+    "zh": "高氯酸",
+    "T": 20,
+    "pts": [[0, 0.998], [5, 1.027], [10, 1.058], [15, 1.091], [20, 1.125], [25, 1.163], [30, 1.204], [35, 1.247], [40, 1.2945], [45, 1.347], [50, 1.405], [55, 1.467], [60, 1.533], [65, 1.603], [70, 1.672]],
+    "source": "L. H. Brickwedde, \"Properties of Aqueous Solutions of Perchloric Acid\", J. Res. NBS 42, 309 (1949), RP1971, Table 2 \"Enlarged table of densities\", +20 °C column (stated uncertainty ~0.1 %)",
+    "urls": ["https://nvlpubs.nist.gov/nistpubs/jres/42/jresv42n3p309_A1b.pdf", "https://archive.org/download/international-critical-tables_1928_3/international-critical-tables_1928_3.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf", "https://wissen.science-and-fun.de/chemistry/chemistry/density-tables/density-of-perchloric-acid/"],
+    "note": "The CRC table has no HClO4; ICT vol. 3 p. 54 (= Perry's Table 2-69) gives 20 °C only for 26-70 % and is 0.002-0.004 lower (30 % 1.2013 vs 1.204, 50 % 1.4018 vs 1.405, 70 % 1.6680 vs 1.672), while ICT 15 °C agrees with NBS 15 °C within 0.001 up to 60 % (10 % 1.0597 vs 1.060, 40 % 1.2991 vs 1.2985, 60 % 1.5389 vs 1.539). NBS 25 °C gives 1.664 for 70 %. 70 % at 20 °C = 1.672 (slightly above the expected 1.66-1.67)."
+  },
+  "HBr": {
+    "zh": "氢溴酸",
+    "T": 20,
+    "pts": [[1, 1.0053], [2, 1.0124], [4, 1.0269], [6, 1.0417], [8, 1.0568], [10, 1.0723], [12, 1.0883], [14, 1.1048], [16, 1.1219], [18, 1.1396], [20, 1.1579], [22, 1.1767], [24, 1.1961], [26, 1.2161], [28, 1.2367], [30, 1.258], [35, 1.315], [40, 1.3772], [45, 1.4446], [50, 1.5173], [55, 1.5953], [60, 1.6787], [65, 1.7675]],
+    "source": "International Critical Tables vol. 3 (1928) p. 55, HBr, d4 at 20 °C column",
+    "urls": ["https://archive.org/download/international-critical-tables_1928_3/international-critical-tables_1928_3.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf", "https://de.wikipedia.org/wiki/Bromwasserstoffs%C3%A4ure", "https://en.wikipedia.org/wiki/Hydrobromic_acid"],
+    "note": "de.wikipedia: 65 % HBr has density 1.7675 at room temperature (identical to ICT 20 °C). en.wikipedia 48 % ~1.49 vs ICT 45 % 1.4446 / 50 % 1.5173. Perry's Table 2-57 reproduces only the 4, 10 and 25 °C columns of this ICT table (its 25 °C column matches ICT, e.g. 1 % 1.0041, 65 % 1.7613)."
+  },
+  "HF": {
+    "zh": "氢氟酸",
+    "T": 20,
+    "pts": [[5, 1.017], [10, 1.035], [15, 1.053], [20, 1.07], [25, 1.086], [30, 1.101], [35, 1.116], [40, 1.13], [45, 1.143], [50, 1.155]],
+    "source": "International Critical Tables vol. 3 (1928) p. 54, HF, d4 at 20 °C column (Perry's 8th ed. Table 2-60 reproduces the 10 %-step subset)",
+    "urls": ["https://archive.org/download/international-critical-tables_1928_3/international-critical-tables_1928_3.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf", "https://en.wikipedia.org/wiki/Hydrofluoric_acid", "https://de.wikipedia.org/wiki/Flusss%C3%A4ure"],
+    "note": "Perry's 20 °C values (5 % 1.017, 10 % 1.035, 20 % 1.070, 30 % 1.101, 40 % 1.130, 50 % 1.155) identical. en.wikipedia: 48 % ~1.15 (ICT 45-50 %: 1.143-1.155, consistent). de.wikipedia quotes 1.14 for the 38 % azeotrope, ~0.015 above ICT (35 % 1.116 / 40 % 1.130). ICT gives 20 °C data only up to 50 % (higher concentrations only at 0 °C)."
+  },
+  "HCOOH": {
+    "zh": "甲酸",
+    "T": 20,
+    "pts": [[0, 0.9982], [1, 1.0019], [2, 1.0044], [4, 1.0093], [6, 1.0141], [8, 1.0196], [10, 1.0246], [12, 1.0296], [15, 1.037], [20, 1.0488], [25, 1.0609], [30, 1.0729], [35, 1.0847], [40, 1.0963], [45, 1.1085], [50, 1.1207], [55, 1.132], [60, 1.1424], [65, 1.1543], [70, 1.1655], [75, 1.1769], [80, 1.186], [85, 1.1953], [90, 1.2044], [95, 1.214], [98, 1.2183], [100, 1.2212]],
+    "source": "International Critical Tables vol. 3 (1928) pp. 122-123, \"CH2O2, Formic acid\", 20 °C column (reproduced in Perry's 8th ed. Table 2-108); subset of the 1 %-step table",
+    "urls": ["https://archive.org/download/international-critical-tables_1928_3/international-critical-tables_1928_3.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf", "https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf", "https://archive.org/download/CRCHandbookOfChemistryAndPhysics97thEdition2016/CRC%20Handbook%20of%20Chemistry%20and%20Physics%20-%2097th%20Edition%20%282016%29_djvu.txt", "https://www.handymath.com/cgi-bin/formictble.cgi?submit=Entry"],
+    "note": "CRC concentrative table only reaches 68 % (85th ed.) / 70 % (97th ed.) and is systematically lower than ICT (10 % 1.0224 vs 1.0246, 36 % 1.0839 vs 1.0871, 60 % 1.1364 vs 1.1424, 70 % 1.1586 vs 1.1655), so a CRC+ICT splice would be inconsistent; the single full-range ICT table was used instead. ICT 100 % (1.2212) agrees with the usual pure-acid value (de.wikipedia/GESTIS: 1.22 g/cm3 at 20 °C), and ICT 20 °C is consistent with its own 0/15/30 °C columns. Perry's reproduction has a misprint at 80 % (1.1806); the ICT scan reads 1.1860. The ICT 20 °C column is somewhat irregular in the last digit."
+  },
+  "HCHO": {
+    "zh": "甲醛",
+    "T": 18,
+    "pts": [[0, 0.9986], [5, 1.0141], [10, 1.0299], [15, 1.0449], [20, 1.06], [25, 1.0757], [30, 1.091], [35, 1.1066], [40, 1.122], [45, 1.1382], [50, 1.157]],
+    "source": "J. F. Walker, \"Formaldehyde\" (ACS Monograph, Reinhold, 1944), Table 8 \"Density and Refraction of Aqueous Formaldehyde\" (data of Natta & Baccaredda), density at 18 °C; pure (methanol-free) aqueous formaldehyde, w = g CH2O / 100 g solution",
+    "urls": ["https://archive.org/download/dli.ernet.211645/211645-Formaldehyde.pdf"],
+    "note": "ASSUMES METHANOL-FREE solutions. Commercial formalin (37 %) usually contains methanol stabiliser, which lowers the density: Walker Table 4 (same authors, 18 °C, 37 % CH2O) gives 1.1128 (0 % MeOH), 1.1009 (5 %), 1.0890 (10 %), 1.0764 (15 %), 1.0639 (20 % MeOH). Cross-check with Walker Table 7 (Auerbach & Barschall, 18 °C): 18.82 % 1.0568, 37.53 % 1.1158 - consistent within ~0.001. The source lists the 0 % point (water at 18 °C). The 45->50 % step (1.1382->1.1570) is larger than the others, as printed."
+  },
+  "NaCl": {
+    "zh": "氯化钠",
+    "T": 20,
+    "pts": [[0.5, 1.0018], [1, 1.0053], [2, 1.0125], [3, 1.0196], [4, 1.0268], [5, 1.034], [6, 1.0413], [7, 1.0486], [8, 1.0559], [9, 1.0633], [10, 1.0707], [12, 1.0857], [14, 1.1008], [16, 1.1162], [18, 1.1319], [20, 1.1478], [22, 1.164], [24, 1.1804], [26, 1.1972]],
+    "source": "CRC Handbook of Chemistry and Physics, 85th ed. (2004), \"Concentrative Properties of Aqueous Solutions: Density, Refractive Index, Freezing Point Depression, and Viscosity\", pp. 8-58..8-84, 20 °C",
+    "urls": ["https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf", "https://en.wikipedia.org/wiki/Sodium_chloride_(data_page)", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf"],
+    "note": "Ends at 26 % (saturation at 20 °C is ~26.4 %). en.wikipedia NaCl data page reproduces the same CRC values. Independent check vs Perry's Table 2-90 (ICT; 10 and 25 °C only): 12 % 1.08946 (10 °C) / 1.08365 (25 °C) and 26 % 1.20254 / 1.19443 bracket the CRC 20 °C values 1.0857 and 1.1972 as expected."
+  },
+  "C3H8O3": {
+    "zh": "甘油",
+    "T": 20,
+    "pts": [[0.5, 0.9994], [1, 1.0005], [2, 1.0028], [3, 1.0051], [4, 1.0074], [5, 1.0097], [6, 1.012], [7, 1.0144], [8, 1.0167], [9, 1.0191], [10, 1.0215], [12, 1.0262], [14, 1.0311], [16, 1.036], [18, 1.0409], [20, 1.0459], [24, 1.0561], [28, 1.0664], [32, 1.077], [36, 1.0876], [40, 1.0984], [44, 1.1092], [48, 1.12], [52, 1.1308], [56, 1.1419], [60, 1.153], [64, 1.1643], [68, 1.1755], [72, 1.1866], [76, 1.1976], [80, 1.2085], [84, 1.2192], [88, 1.2299], [92, 1.2404], [96, 1.2508], [100, 1.2611]],
+    "source": "CRC Handbook of Chemistry and Physics, 85th ed. (2004), \"Concentrative Properties of Aqueous Solutions: Density, Refractive Index, Freezing Point Depression, and Viscosity\", pp. 8-58..8-84, 20 °C",
+    "urls": ["https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf"],
+    "note": "Cross-check vs Perry's 8th ed. Table 2-117 (Bosart & Snoddy 1928, 20 °C): 10 % 1.02210 vs 1.0215, 40 % 1.09930 vs 1.0984, 80 % 1.20850 vs 1.2085, 100 % 1.26108 vs 1.2611 (agreement within 0.001)."
+  },
+  "HI": {
+    "zh": "氢碘酸",
+    "T": 20,
+    "pts": [[1, 1.0054], [2, 1.0127], [4, 1.0277], [6, 1.0431], [8, 1.0589], [10, 1.0751], [12, 1.0918], [14, 1.1091], [16, 1.127], [18, 1.1456], [20, 1.1649], [22, 1.185], [24, 1.2059], [26, 1.2277], [28, 1.2503], [30, 1.2737], [35, 1.3357], [40, 1.4029], [45, 1.4755]],
+    "source": "International Critical Tables vol. 3 (1928) p. 55, HI, d4 at 20 °C column",
+    "urls": ["https://archive.org/download/international-critical-tables_1928_3/international-critical-tables_1928_3.pdf", "https://de.wikipedia.org/wiki/Iodwasserstoffs%C3%A4ure", "https://en.wikipedia.org/wiki/Hydroiodic_acid"],
+    "note": "Table ends at 45 %; the commercial ~57 % azeotrope is NOT covered (de.wikipedia: 56.7 % -> 1.708 at 25 °C; en.wikipedia: 57 % -> 1.70). No second tabular source for <=45 % was found."
+  },
+  "HOCH2CH2OH": {
+    "zh": "乙二醇",
+    "T": 20,
+    "pts": [[0.5, 0.9988], [1, 0.9995], [2, 1.0007], [3, 1.0019], [4, 1.0032], [5, 1.0044], [6, 1.0057], [7, 1.007], [8, 1.0082], [9, 1.0095], [10, 1.0108], [12, 1.0134], [14, 1.0161], [16, 1.0188], [18, 1.0214], [20, 1.0241], [24, 1.0296], [28, 1.035], [32, 1.0405], [36, 1.046], [40, 1.0514], [44, 1.0567], [48, 1.0619], [52, 1.067], [56, 1.0719], [60, 1.0765]],
+    "source": "CRC Handbook of Chemistry and Physics, 85th ed. (2004), \"Concentrative Properties of Aqueous Solutions: Density, Refractive Index, Freezing Point Depression, and Viscosity\", pp. 8-58..8-84, 20 °C",
+    "urls": ["https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf", "https://archive.org/download/CRCHandbookOfChemistryAndPhysics97thEdition2016/CRC%20Handbook%20of%20Chemistry%20and%20Physics%20-%2097th%20Edition%20%282016%29_djvu.txt", "https://www.meglobal.biz/wp-content/uploads/2024/03/MEG_Guide_Rev_2024_W2.pdf"],
+    "note": "CRC table ends at 60 % (same range in the 97th ed.); no published 20 °C table above 60 % was found (Perry's/ICT give only a polynomial fit; the MEGlobal MEG guide has no solution-density table, only SG 20/20 °C = 1.1153 for pure glycol, i.e. ~1.113 g/mL - not included). No independent tabular cross-check performed."
+  },
+  "CH3OH": {
+    "zh": "甲醇",
+    "T": 20,
+    "pts": [[0.5, 0.9973], [1, 0.9964], [2, 0.9947], [3, 0.993], [4, 0.9913], [5, 0.9896], [6, 0.988], [7, 0.9864], [8, 0.9848], [9, 0.9832], [10, 0.9816], [12, 0.9785], [14, 0.9755], [16, 0.9725], [18, 0.9695], [20, 0.9666], [22, 0.9636], [24, 0.9606], [26, 0.9576], [28, 0.9545], [30, 0.9514], [32, 0.9482], [34, 0.945], [36, 0.9416], [38, 0.9382], [40, 0.9347], [50, 0.9156], [60, 0.8944], [70, 0.8715], [80, 0.8468], [90, 0.8204], [100, 0.7917]],
+    "source": "CRC Handbook of Chemistry and Physics, 85th ed. (2004), \"Concentrative Properties of Aqueous Solutions: Density, Refractive Index, Freezing Point Depression, and Viscosity\", pp. 8-58..8-84, 20 °C",
+    "urls": ["https://archive.org/download/crc-handbook-of-chemistry-and-physics-85-th-edition/CRC%20Handbook%20of%20Chemistry%20and%20Physics%2085%20th%20Edition.pdf", "https://archive.org/download/perrys-chemical-engineers-handbook/Perrys_Chemical_Engineers_Handbook.pdf", "https://www.handymath.com/cgi-bin/methanoltble3.cgi?submit=Entry"],
+    "note": "Cross-check vs Perry's 8th ed. Table 2-111 (20 °C): 10 % 0.9815 vs 0.9816, 20 % 0.9666 vs 0.9666, 70 % 0.8715 vs 0.8715, 90 % 0.8202 vs 0.8204."
+  }
+}

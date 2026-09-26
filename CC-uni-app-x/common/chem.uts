@@ -1,0 +1,206 @@
+// 化学式解析、摩尔质量、下标显示 —— 与设计稿中的算法一致，元素表扩展到全部 118 种元素
+
+const SYMS : string[] = ('H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca Sc Ti V Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr ' +
+	'Rb Sr Y Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te I Xe Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu ' +
+	'Hf Ta W Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa U Np Pu Am Cm Bk Cf Es Fm Md No Lr ' +
+	'Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og').split(' ')
+
+// IUPAC 常用（简化）标准原子量；无稳定同位素的元素取最稳定同位素质量数
+const WTS : number[] = [1.008, 4.0026, 6.94, 9.0122, 10.81, 12.011, 14.007, 15.999, 18.998, 20.180, 22.990, 24.305, 26.982, 28.085, 30.974, 32.06, 35.45, 39.948, 39.098, 40.078,
+	44.956, 47.867, 50.942, 51.996, 54.938, 55.845, 58.933, 58.693, 63.546, 65.38, 69.723, 72.630, 74.922, 78.971, 79.904, 83.798,
+	85.468, 87.62, 88.906, 91.224, 92.906, 95.95, 98, 101.07, 102.91, 106.42, 107.87, 112.41, 114.82, 118.71, 121.76, 127.60, 126.90, 131.29,
+	132.91, 137.33, 138.91, 140.12, 140.91, 144.24, 145, 150.36, 151.96, 157.25, 158.93, 162.50, 164.93, 167.26, 168.93, 173.05, 174.97,
+	178.49, 180.95, 183.84, 186.21, 190.23, 192.22, 195.08, 196.97, 200.59, 204.38, 207.2, 208.98, 209, 210, 222, 223, 226, 227, 232.04, 231.04, 238.03,
+	237, 244, 243, 247, 247, 251, 252, 257, 258, 259, 266, 267, 268, 269, 270, 269, 278, 281, 282, 285, 286, 289, 290, 293, 294, 294]
+
+function buildAW() : Map<string, number> {
+	const m = new Map<string, number>()
+	for (let i = 0; i < SYMS.length; i++) {
+		m.set(SYMS[i], WTS[i])
+	}
+	return m
+}
+
+export const AW : Map<string, number> = buildAW()
+
+function isDigit(c : string) : boolean {
+	return c >= '0' && c <= '9'
+}
+function isUpper(c : string) : boolean {
+	return c >= 'A' && c <= 'Z'
+}
+function isLower(c : string) : boolean {
+	return c >= 'a' && c <= 'z'
+}
+
+// 去空白；下标数字转普通数字；各种点号统一为「·」
+export function normF(s : string) : string {
+	let out = ''
+	for (let i = 0; i < s.length; i++) {
+		const code = s.charCodeAt(i)!
+		if (code == 32 || code == 9 || code == 10 || code == 13 || code == 0x3000 || code == 0xa0) continue
+		if (code >= 0x2080 && code <= 0x2089) {
+			out += String.fromCharCode(code - 0x2080 + 48)
+		} else if (code == 0x2e || code == 0x2a || code == 0x2022 || code == 0x22c5 || code == 0x2219 || code == 0xb7) {
+			out += '·'
+		} else {
+			out += s.charAt(i)
+		}
+	}
+	return out
+}
+
+function addTo(dst : Map<string, number>, el : string, n : number) {
+	const cur = dst.get(el)
+	dst.set(el, (cur == null ? 0 : cur) + n)
+}
+
+// 解析一段（不含「·」）：元素、数字、括号嵌套
+function parseGroup(seg : string) : Map<string, number> | null {
+	const stack : Map<string, number>[] = [new Map<string, number>()]
+	let i = 0
+	while (i < seg.length) {
+		const c = seg.charAt(i)
+		if (c == '(' || c == '[') {
+			stack.push(new Map<string, number>())
+			i++
+		} else if (c == ')' || c == ']') {
+			i++
+			const st = i
+			while (i < seg.length && isDigit(seg.charAt(i))) i++
+			const n = st == i ? 1 : parseInt(seg.substring(st, i))
+			if (stack.length < 2) return null
+			const top = stack.pop()!
+			const dst = stack[stack.length - 1]
+			top.forEach((v : number, k : string) => {
+				addTo(dst, k, v * n)
+			})
+		} else if (isUpper(c)) {
+			let el = c
+			i++
+			while (i < seg.length && isLower(seg.charAt(i))) {
+				el += seg.charAt(i)
+				i++
+			}
+			if (!AW.has(el)) return null
+			const st = i
+			while (i < seg.length && isDigit(seg.charAt(i))) i++
+			const n2 = st == i ? 1 : parseInt(seg.substring(st, i))
+			addTo(stack[stack.length - 1], el, n2)
+		} else {
+			return null
+		}
+	}
+	return stack.length == 1 ? stack[0] : null
+}
+
+// 元素计数（结晶水计入）；无法解析返回 null
+export function elementCounts(str : string) : Map<string, number> | null {
+	const s = normF(str)
+	if (s.length == 0) return null
+	const parts = s.split('·')
+	const tot = new Map<string, number>()
+	for (let p = 0; p < parts.length; p++) {
+		let seg = parts[p]
+		if (seg.length == 0) return null
+		let mult = 1
+		if (p > 0) {
+			let j = 0
+			while (j < seg.length && isDigit(seg.charAt(j))) j++
+			if (j > 0) {
+				mult = parseInt(seg.substring(0, j))
+				seg = seg.substring(j)
+			}
+		}
+		const g = parseGroup(seg)
+		if (g == null) return null
+		g.forEach((v : number, k : string) => {
+			addTo(tot, k, v * mult)
+		})
+	}
+	return tot
+}
+
+export function molarMass(str : string) : number | null {
+	const g = elementCounts(str)
+	if (g == null) return null
+	let tot = 0
+	g.forEach((v : number, k : string) => {
+		tot += AW.get(k)! * v
+	})
+	return tot > 0 ? tot : null
+}
+
+// Hill 式（用于离线库按化学式检索）
+export function hillKey(str : string) : string | null {
+	const g = elementCounts(str)
+	if (g == null) return null
+	const keys : string[] = []
+	g.forEach((v : number, k : string) => {
+		if (v > 0) keys.push(k)
+	})
+	const hasC = g.has('C')
+	keys.sort((a : string, b : string) : number => {
+		if (hasC) {
+			const ra = a == 'C' ? 0 : (a == 'H' ? 1 : 2)
+			const rb = b == 'C' ? 0 : (b == 'H' ? 1 : 2)
+			if (ra != rb) return ra - rb
+		}
+		return a < b ? -1 : (a > b ? 1 : 0)
+	})
+	let out = ''
+	for (let i = 0; i < keys.length; i++) {
+		const n = g.get(keys[i])!
+		out += keys[i] + (n == 1 ? '' : n.toFixed(0))
+	}
+	return out
+}
+
+export type FPart = {
+	t : string
+	sub : boolean
+}
+
+// 把化学式拆成「正常 / 下标」片段：跟在元素或右括号后的数字是下标
+export function fParts(str : string) : FPart[] {
+	const s = normF(str)
+	const out : FPart[] = []
+	for (let i = 0; i < s.length; i++) {
+		const c = s.charAt(i)
+		let sub = false
+		if (isDigit(c)) {
+			let j = i - 1
+			while (j >= 0 && isDigit(s.charAt(j))) j--
+			if (j >= 0) {
+				const pc = s.charAt(j)
+				sub = isUpper(pc) || isLower(pc) || pc == ')' || pc == ']'
+			}
+		}
+		if (out.length > 0 && out[out.length - 1].sub == sub) {
+			out[out.length - 1].t += c
+		} else {
+			out.push({ t: c, sub: sub } as FPart)
+		}
+	}
+	return out
+}
+
+const SUBS = '₀₁₂₃₄₅₆₇₈₉'
+
+// CuSO4·5H2O → CuSO₄·5H₂O
+export function pretty(str : string) : string {
+	const ps = fParts(str)
+	let out = ''
+	for (let i = 0; i < ps.length; i++) {
+		const p = ps[i]
+		if (p.sub) {
+			for (let k = 0; k < p.t.length; k++) {
+				const d = p.t.charCodeAt(k)! - 48
+				out += SUBS.charAt(d)
+			}
+		} else {
+			out += p.t
+		}
+	}
+	return out
+}

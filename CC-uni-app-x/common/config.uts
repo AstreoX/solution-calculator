@@ -1,0 +1,83 @@
+// 联网服务配置（均为通用 HTTP 接入，留空即不启用）
+//
+// 1) 多组分「反应与相容性检查」的 LLM 复核：任意 OpenAI 兼容的 /chat/completions 接口
+//    例：baseUrl = 'https://api.deepseek.com/v1'、'https://dashscope.aliyuncs.com/compatible-mode/v1'、
+//        'https://open.bigmodel.cn/api/paas/v4'、'https://api.openai.com/v1' 等
+//    未配置时只使用离线规则库。
+//
+// 2) 标签扫描的 OCR：provider 三选一
+//    - 'openai'：OpenAI 兼容的视觉模型（通过 /chat/completions 传图片，让模型逐行转写文字）
+//    - 'baidu' ：百度智能云「通用文字识别（高精度含位置版）」，可在照片上标出识别框
+//    - 'custom'：自建 OCR 服务，POST {image: base64} → {lines: [{text, box: [x, y, w, h]}]}
+//    未配置时扫描页可拍照 / 选图，但需要手动填写识别结果。
+//
+// 3) 版本更新与公告：App 启动时按顺序尝试 UPDATE_SOURCES 里的地址读取 update.json，第一个成功的为准；
+//    全部失败时沿用上次缓存的内容（公告离线也能看）。留空则不检查更新、不显示公告。
+//    update.json 的格式和发布步骤见 tools/release/README.md。
+
+export type LlmConfig = {
+	baseUrl : string
+	apiKey : string
+	model : string
+	timeoutMs : number
+}
+
+export type OcrConfig = {
+	provider : string // '' | 'openai' | 'baidu' | 'custom'
+	// openai 兼容视觉模型
+	baseUrl : string
+	apiKey : string
+	model : string
+	// 百度 OCR
+	baiduApiKey : string
+	baiduSecretKey : string
+	// 自建服务
+	customUrl : string
+	customToken : string
+	timeoutMs : number
+}
+
+// 设置页视觉模型的默认 API Key（首次安装时填入 OpenRouter 设置）。
+// 这是你提供的有限额测试 Key：会被打进安装包，公开发布前请清空或换成正式 Key。
+export const VLM_DEFAULT_KEY = ''
+
+// 开发自检用：为 true 时各页面载入设计稿里的示例数据（用于与设计稿逐像素对照），正式包必须为 false
+export const DEMO = false
+
+// 把 <用户名>/<仓库> 换成你的 Gitee / GitHub 仓库（raw 地址，分支名按实际填写）
+export const UPDATE_SOURCES : string[] = [
+	// 'https://gitee.com/<用户名>/<仓库>/raw/master/update.json',
+	// 'https://raw.githubusercontent.com/<用户名>/<仓库>/main/update.json',
+	// 'https://cdn.jsdelivr.net/gh/<用户名>/<仓库>@main/update.json'
+]
+
+export const LLM : LlmConfig = {
+	baseUrl: '',
+	apiKey: '',
+	model: '',
+	timeoutMs: 45000
+}
+
+export const OCR : OcrConfig = {
+	provider: '',
+	baseUrl: '',
+	apiKey: '',
+	model: '',
+	baiduApiKey: '',
+	baiduSecretKey: '',
+	customUrl: '',
+	customToken: '',
+	timeoutMs: 30000
+}
+
+export function llmEnabled() : boolean {
+	return LLM.baseUrl.length > 0 && LLM.model.length > 0
+}
+
+export function ocrEnabled() : boolean {
+	const p = OCR.provider
+	if (p == 'openai') return OCR.baseUrl.length > 0 && OCR.model.length > 0
+	if (p == 'baidu') return OCR.baiduApiKey.length > 0 && OCR.baiduSecretKey.length > 0
+	if (p == 'custom') return OCR.customUrl.length > 0
+	return false
+}

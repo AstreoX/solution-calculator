@@ -1,0 +1,610 @@
+{
+  "generated": "2026-09-26T03:19:29",
+  "fonttools": "4.66.0",
+  "notes": [
+    "line_height_normal is the Chrome 'line-height: normal' multiplier of font-size.",
+    "Android/Linux/ChromeOS (Skia+FreeType) and Mac (CoreText) use hhea asc+|desc|+lineGap; Windows (DirectWrite) uses usWinAscent+usWinDescent (+max(0, hheaTotal-winTotal)); USE_TYPO_METRICS (fsSelection bit 7) switches both to OS/2 typo metrics. It is off in all 6 fonts.",
+    "Blink rounds each part separately: px = round(asc*fs)+round(desc*fs)+round(gap*fs); see chrome_line_height_px for the font sizes used in the design.",
+    "Android native text (Paint.getFontMetrics, Skia/FreeType) uses the same hhea values because USE_TYPO_METRICS is off.",
+    "Vertical metrics are unchanged from the Google Fonts sources."
+  ],
+  "design_font_sizes_px": [
+    10.0,
+    11.0,
+    12.0,
+    13.0,
+    14.0,
+    15.0,
+    16.0,
+    17.0,
+    20.0,
+    22.0,
+    26.0,
+    28.0,
+    40.0
+  ],
+  "fonts": {
+    "ns4": {
+      "file": "static/fonts/ns4.ttf",
+      "bytes": 3270640,
+      "family_in_design": "Noto Serif SC",
+      "weight": 400,
+      "internal_family_name": "ns4",
+      "source_version": "ns4;2.003-H1;cc-build",
+      "glyphs": 8029,
+      "cmap_size": 8010,
+      "unitsPerEm": 1000,
+      "hhea": {
+        "ascender": 1151,
+        "descender": -286,
+        "lineGap": 0
+      },
+      "os2": {
+        "typoAscender": 880,
+        "typoDescender": -120,
+        "typoLineGap": 0,
+        "winAscent": 1151,
+        "winDescent": 286,
+        "USE_TYPO_METRICS": false,
+        "xHeight": 514,
+        "capHeight": 729,
+        "usWeightClass": 400
+      },
+      "chrome": {
+        "android_linux_chromeos_mac": {
+          "ascent_em": 1.151,
+          "descent_em": 0.286,
+          "lineGap_em": 0.0,
+          "line_height_normal": 1.437
+        },
+        "windows": {
+          "ascent_em": 1.151,
+          "descent_em": 0.286,
+          "lineGap_em": 0.0,
+          "line_height_normal": 1.437
+        }
+      },
+      "chrome_line_height_px": {
+        "android_linux_chromeos_mac": {
+          "10": 15,
+          "11": 16,
+          "12": 17,
+          "13": 19,
+          "14": 20,
+          "15": 21,
+          "16": 23,
+          "17": 25,
+          "20": 29,
+          "22": 31,
+          "26": 37,
+          "28": 40,
+          "40": 57
+        },
+        "windows": {
+          "10": 15,
+          "11": 16,
+          "12": 17,
+          "13": 19,
+          "14": 20,
+          "15": 21,
+          "16": 23,
+          "17": 25,
+          "20": 29,
+          "22": 31,
+          "26": 37,
+          "28": 40,
+          "40": 57
+        }
+      },
+      "advance_em": {
+        "0": 0.557,
+        "1": 0.471,
+        "2": 0.558,
+        "3": 0.557,
+        "4": 0.555,
+        "5": 0.558,
+        "6": 0.558,
+        "7": 0.549,
+        "8": 0.558,
+        "9": 0.562,
+        ".": 0.327,
+        "space": 0.256,
+        ",": 0.327,
+        "-": 0.346,
+        "−": 0.58,
+        "·": 0.327,
+        "一": 1.0
+      },
+      "digits_equal_width": false,
+      "tnum": {
+        "source_has_tnum_feature": false,
+        "cmap_entries_remapped": {}
+      }
+    },
+    "ns5": {
+      "file": "static/fonts/ns5.ttf",
+      "bytes": 3270608,
+      "family_in_design": "Noto Serif SC",
+      "weight": 500,
+      "internal_family_name": "ns5",
+      "source_version": "ns5;2.003-H1;cc-build",
+      "glyphs": 8029,
+      "cmap_size": 8010,
+      "unitsPerEm": 1000,
+      "hhea": {
+        "ascender": 1151,
+        "descender": -286,
+        "lineGap": 0
+      },
+      "os2": {
+        "typoAscender": 880,
+        "typoDescender": -120,
+        "typoLineGap": 0,
+        "winAscent": 1151,
+        "winDescent": 286,
+        "USE_TYPO_METRICS": false,
+        "xHeight": 514,
+        "capHeight": 729,
+        "usWeightClass": 500
+      },
+      "chrome": {
+        "android_linux_chromeos_mac": {
+          "ascent_em": 1.151,
+          "descent_em": 0.286,
+          "lineGap_em": 0.0,
+          "line_height_normal": 1.437
+        },
+        "windows": {
+          "ascent_em": 1.151,
+          "descent_em": 0.286,
+          "lineGap_em": 0.0,
+          "line_height_normal": 1.437
+        }
+      },
+      "chrome_line_height_px": {
+        "android_linux_chromeos_mac": {
+          "10": 15,
+          "11": 16,
+          "12": 17,
+          "13": 19,
+          "14": 20,
+          "15": 21,
+          "16": 23,
+          "17": 25,
+          "20": 29,
+          "22": 31,
+          "26": 37,
+          "28": 40,
+          "40": 57
+        },
+        "windows": {
+          "10": 15,
+          "11": 16,
+          "12": 17,
+          "13": 19,
+          "14": 20,
+          "15": 21,
+          "16": 23,
+          "17": 25,
+          "20": 29,
+          "22": 31,
+          "26": 37,
+          "28": 40,
+          "40": 57
+        }
+      },
+      "advance_em": {
+        "0": 0.567,
+        "1": 0.469,
+        "2": 0.569,
+        "3": 0.567,
+        "4": 0.566,
+        "5": 0.569,
+        "6": 0.569,
+        "7": 0.56,
+        "8": 0.569,
+        "9": 0.572,
+        ".": 0.329,
+        "space": 0.255,
+        ",": 0.329,
+        "-": 0.353,
+        "−": 0.587,
+        "·": 0.329,
+        "一": 1.0
+      },
+      "digits_equal_width": false,
+      "tnum": {
+        "source_has_tnum_feature": false,
+        "cmap_entries_remapped": {}
+      }
+    },
+    "ns7": {
+      "file": "static/fonts/ns7.ttf",
+      "bytes": 3270492,
+      "family_in_design": "Noto Serif SC",
+      "weight": 700,
+      "internal_family_name": "ns7",
+      "source_version": "ns7;2.003-H1;cc-build",
+      "glyphs": 8029,
+      "cmap_size": 8010,
+      "unitsPerEm": 1000,
+      "hhea": {
+        "ascender": 1151,
+        "descender": -286,
+        "lineGap": 0
+      },
+      "os2": {
+        "typoAscender": 880,
+        "typoDescender": -120,
+        "typoLineGap": 0,
+        "winAscent": 1151,
+        "winDescent": 286,
+        "USE_TYPO_METRICS": false,
+        "xHeight": 514,
+        "capHeight": 729,
+        "usWeightClass": 700
+      },
+      "chrome": {
+        "android_linux_chromeos_mac": {
+          "ascent_em": 1.151,
+          "descent_em": 0.286,
+          "lineGap_em": 0.0,
+          "line_height_normal": 1.437
+        },
+        "windows": {
+          "ascent_em": 1.151,
+          "descent_em": 0.286,
+          "lineGap_em": 0.0,
+          "line_height_normal": 1.437
+        }
+      },
+      "chrome_line_height_px": {
+        "android_linux_chromeos_mac": {
+          "10": 15,
+          "11": 16,
+          "12": 17,
+          "13": 19,
+          "14": 20,
+          "15": 21,
+          "16": 23,
+          "17": 25,
+          "20": 29,
+          "22": 31,
+          "26": 37,
+          "28": 40,
+          "40": 57
+        },
+        "windows": {
+          "10": 15,
+          "11": 16,
+          "12": 17,
+          "13": 19,
+          "14": 20,
+          "15": 21,
+          "16": 23,
+          "17": 25,
+          "20": 29,
+          "22": 31,
+          "26": 37,
+          "28": 40,
+          "40": 57
+        }
+      },
+      "advance_em": {
+        "0": 0.593,
+        "1": 0.466,
+        "2": 0.594,
+        "3": 0.593,
+        "4": 0.593,
+        "5": 0.594,
+        "6": 0.594,
+        "7": 0.588,
+        "8": 0.594,
+        "9": 0.596,
+        ".": 0.335,
+        "space": 0.25,
+        ",": 0.335,
+        "-": 0.37,
+        "−": 0.603,
+        "·": 0.335,
+        "一": 1.0
+      },
+      "digits_equal_width": false,
+      "tnum": {
+        "source_has_tnum_feature": false,
+        "cmap_entries_remapped": {}
+      }
+    },
+    "px4": {
+      "file": "static/fonts/px4.ttf",
+      "bytes": 106356,
+      "family_in_design": "IBM Plex Serif",
+      "weight": 400,
+      "internal_family_name": "px4",
+      "source_version": "px4;2.6;cc-build",
+      "glyphs": 832,
+      "cmap_size": 754,
+      "unitsPerEm": 1000,
+      "hhea": {
+        "ascender": 1150,
+        "descender": -286,
+        "lineGap": 0
+      },
+      "os2": {
+        "typoAscender": 1025,
+        "typoDescender": -275,
+        "typoLineGap": 0,
+        "winAscent": 1150,
+        "winDescent": 286,
+        "USE_TYPO_METRICS": false,
+        "xHeight": 516,
+        "capHeight": 698,
+        "usWeightClass": 400
+      },
+      "chrome": {
+        "android_linux_chromeos_mac": {
+          "ascent_em": 1.15,
+          "descent_em": 0.286,
+          "lineGap_em": 0.0,
+          "line_height_normal": 1.436
+        },
+        "windows": {
+          "ascent_em": 1.15,
+          "descent_em": 0.286,
+          "lineGap_em": 0.0,
+          "line_height_normal": 1.436
+        }
+      },
+      "chrome_line_height_px": {
+        "android_linux_chromeos_mac": {
+          "10": 15,
+          "11": 16,
+          "12": 17,
+          "13": 19,
+          "14": 20,
+          "15": 21,
+          "16": 23,
+          "17": 25,
+          "20": 29,
+          "22": 31,
+          "26": 37,
+          "28": 40,
+          "40": 57
+        },
+        "windows": {
+          "10": 15,
+          "11": 16,
+          "12": 17,
+          "13": 19,
+          "14": 20,
+          "15": 21,
+          "16": 23,
+          "17": 25,
+          "20": 29,
+          "22": 31,
+          "26": 37,
+          "28": 40,
+          "40": 57
+        }
+      },
+      "advance_em": {
+        "0": 0.6,
+        "1": 0.6,
+        "2": 0.6,
+        "3": 0.6,
+        "4": 0.6,
+        "5": 0.6,
+        "6": 0.6,
+        "7": 0.6,
+        "8": 0.6,
+        "9": 0.6,
+        ".": 0.268,
+        "space": 0.232,
+        ",": 0.268,
+        "-": 0.393,
+        "−": 0.6,
+        "·": 0.324,
+        "一": null
+      },
+      "digits_equal_width": true,
+      "tnum": {
+        "source_has_tnum_feature": false,
+        "cmap_entries_remapped": {}
+      }
+    },
+    "px5": {
+      "file": "static/fonts/px5.ttf",
+      "bytes": 107180,
+      "family_in_design": "IBM Plex Serif",
+      "weight": 500,
+      "internal_family_name": "px5",
+      "source_version": "px5;2.6;cc-build",
+      "glyphs": 832,
+      "cmap_size": 754,
+      "unitsPerEm": 1000,
+      "hhea": {
+        "ascender": 1150,
+        "descender": -286,
+        "lineGap": 0
+      },
+      "os2": {
+        "typoAscender": 1025,
+        "typoDescender": -275,
+        "typoLineGap": 0,
+        "winAscent": 1150,
+        "winDescent": 286,
+        "USE_TYPO_METRICS": false,
+        "xHeight": 520,
+        "capHeight": 698,
+        "usWeightClass": 500
+      },
+      "chrome": {
+        "android_linux_chromeos_mac": {
+          "ascent_em": 1.15,
+          "descent_em": 0.286,
+          "lineGap_em": 0.0,
+          "line_height_normal": 1.436
+        },
+        "windows": {
+          "ascent_em": 1.15,
+          "descent_em": 0.286,
+          "lineGap_em": 0.0,
+          "line_height_normal": 1.436
+        }
+      },
+      "chrome_line_height_px": {
+        "android_linux_chromeos_mac": {
+          "10": 15,
+          "11": 16,
+          "12": 17,
+          "13": 19,
+          "14": 20,
+          "15": 21,
+          "16": 23,
+          "17": 25,
+          "20": 29,
+          "22": 31,
+          "26": 37,
+          "28": 40,
+          "40": 57
+        },
+        "windows": {
+          "10": 15,
+          "11": 16,
+          "12": 17,
+          "13": 19,
+          "14": 20,
+          "15": 21,
+          "16": 23,
+          "17": 25,
+          "20": 29,
+          "22": 31,
+          "26": 37,
+          "28": 40,
+          "40": 57
+        }
+      },
+      "advance_em": {
+        "0": 0.6,
+        "1": 0.6,
+        "2": 0.6,
+        "3": 0.6,
+        "4": 0.6,
+        "5": 0.6,
+        "6": 0.6,
+        "7": 0.6,
+        "8": 0.6,
+        "9": 0.6,
+        ".": 0.272,
+        "space": 0.232,
+        ",": 0.272,
+        "-": 0.396,
+        "−": 0.6,
+        "·": 0.334,
+        "一": null
+      },
+      "digits_equal_width": true,
+      "tnum": {
+        "source_has_tnum_feature": false,
+        "cmap_entries_remapped": {}
+      }
+    },
+    "px6": {
+      "file": "static/fonts/px6.ttf",
+      "bytes": 107012,
+      "family_in_design": "IBM Plex Serif",
+      "weight": 600,
+      "internal_family_name": "px6",
+      "source_version": "px6;2.6;cc-build",
+      "glyphs": 832,
+      "cmap_size": 754,
+      "unitsPerEm": 1000,
+      "hhea": {
+        "ascender": 1150,
+        "descender": -286,
+        "lineGap": 0
+      },
+      "os2": {
+        "typoAscender": 1025,
+        "typoDescender": -275,
+        "typoLineGap": 0,
+        "winAscent": 1150,
+        "winDescent": 286,
+        "USE_TYPO_METRICS": false,
+        "xHeight": 522,
+        "capHeight": 698,
+        "usWeightClass": 600
+      },
+      "chrome": {
+        "android_linux_chromeos_mac": {
+          "ascent_em": 1.15,
+          "descent_em": 0.286,
+          "lineGap_em": 0.0,
+          "line_height_normal": 1.436
+        },
+        "windows": {
+          "ascent_em": 1.15,
+          "descent_em": 0.286,
+          "lineGap_em": 0.0,
+          "line_height_normal": 1.436
+        }
+      },
+      "chrome_line_height_px": {
+        "android_linux_chromeos_mac": {
+          "10": 15,
+          "11": 16,
+          "12": 17,
+          "13": 19,
+          "14": 20,
+          "15": 21,
+          "16": 23,
+          "17": 25,
+          "20": 29,
+          "22": 31,
+          "26": 37,
+          "28": 40,
+          "40": 57
+        },
+        "windows": {
+          "10": 15,
+          "11": 16,
+          "12": 17,
+          "13": 19,
+          "14": 20,
+          "15": 21,
+          "16": 23,
+          "17": 25,
+          "20": 29,
+          "22": 31,
+          "26": 37,
+          "28": 40,
+          "40": 57
+        }
+      },
+      "advance_em": {
+        "0": 0.6,
+        "1": 0.6,
+        "2": 0.6,
+        "3": 0.6,
+        "4": 0.6,
+        "5": 0.6,
+        "6": 0.6,
+        "7": 0.6,
+        "8": 0.6,
+        "9": 0.6,
+        ".": 0.278,
+        "space": 0.232,
+        ",": 0.278,
+        "-": 0.396,
+        "−": 0.6,
+        "·": 0.346,
+        "一": null
+      },
+      "digits_equal_width": true,
+      "tnum": {
+        "source_has_tnum_feature": false,
+        "cmap_entries_remapped": {}
+      }
+    }
+  }
+}

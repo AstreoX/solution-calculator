@@ -1,0 +1,101 @@
+// 数值解析与格式化（与设计稿的 sig / num / fmtV 等函数输出一致）
+
+export const DASH = '—'
+
+function stripZeros(s : string) : string {
+	if (s.indexOf('.') < 0) return s
+	let e = s.length
+	while (e > 0 && s.charAt(e - 1) == '0') e--
+	if (e > 0 && s.charAt(e - 1) == '.') e--
+	return s.substring(0, e)
+}
+
+// 保留 n 位有效数字，去掉末尾 0（等价于 String(Number(x.toPrecision(n)))）
+export function sig(x : number | null, n : number) : string {
+	if (x == null) return DASH
+	const v = x as number
+	if (isNaN(v) || !isFinite(v)) return DASH
+	if (v == 0) return '0'
+	const neg = v < 0
+	const a = Math.abs(v)
+	let e = Math.floor(Math.log10(a))
+	let dec = n - 1 - e
+	// 四舍五入可能进位到下一数量级（如 9.9996 → 10.00）
+	const scaled = Math.round(a * Math.pow(10, dec))
+	if (scaled >= Math.pow(10, n)) {
+		e += 1
+		dec = n - 1 - e
+	}
+	let s : string
+	if (dec >= 0) {
+		s = stripZeros(a.toFixed(dec))
+	} else {
+		const p = Math.pow(10, -dec)
+		s = (Math.round(a / p) * p).toFixed(0)
+	}
+	return neg ? '-' + s : s
+}
+
+// 宽松解析：接受逗号小数点、前后空白；无法解析返回 null
+export function num(s : string | null) : number | null {
+	if (s == null) return null
+	let t = (s as string).trim()
+	const ci = t.indexOf(',')
+	const cj = t.indexOf('，')
+	if (ci >= 0) t = t.substring(0, ci) + '.' + t.substring(ci + 1)
+	else if (cj >= 0) t = t.substring(0, cj) + '.' + t.substring(cj + 1)
+	const m = t.match(/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?/)
+	if (m == null) return null
+	const v = parseFloat(m[0]!)
+	return isFinite(v) ? v : null
+}
+
+export function fixed(x : number, d : number) : string {
+	return x.toFixed(d)
+}
+
+export function fmtV(v : number) : string {
+	return v < 1 ? v.toFixed(3) : v.toFixed(2)
+}
+
+export function fmtPct(x : number) : string {
+	return (x < 1 ? x.toFixed(2) : (x < 10 ? x.toFixed(1) : x.toFixed(0))) + '%'
+}
+
+export function massAuto(g : number | null) : string {
+	if (g == null || !(g > 0)) return DASH
+	if (g >= 1) return sig(g, 4) + ' g'
+	if (g >= 0.001) return sig(g * 1000, 4) + ' mg'
+	return sig(g * 1e6, 4) + ' µg'
+}
+
+export function molAuto(n : number | null) : string {
+	if (n == null || !(n > 0)) return DASH
+	if (n >= 1) return sig(n, 4) + ' mol'
+	if (n >= 0.001) return sig(n * 1000, 4) + ' mmol'
+	return sig(n * 1e6, 4) + ' µmol'
+}
+
+export function concAuto(c : number | null) : string {
+	if (c == null || !(c > 0)) return DASH
+	if (c >= 1) return sig(c, 4) + ' mol/L'
+	if (c >= 0.001) return sig(c * 1000, 4) + ' mmol/L'
+	return sig(c * 1e6, 4) + ' µmol/L'
+}
+
+export type VolText = {
+	v : string
+	u : string
+}
+
+export function volAuto(mL : number) : VolText {
+	if (mL >= 1) return { v: mL.toFixed(2), u: 'mL' } as VolText
+	const ul = mL * 1000
+	return { v: ul >= 100 ? ul.toFixed(0) : ul.toFixed(1), u: 'µL' } as VolText
+}
+
+// 整数或短小数的显示（替代 String(number)，避免原生端出现 "100.0"）
+export function numStr(x : number) : string {
+	if (Math.floor(x) == x && Math.abs(x) < 1e15) return x.toFixed(0)
+	return sig(x, 12)
+}

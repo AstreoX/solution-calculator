@@ -1,0 +1,332 @@
+<script setup lang="uts">
+	import { dbInit } from '@/common/db.uts'
+
+	// #ifdef APP-ANDROID || APP-HARMONY
+	let firstBackTime = 0
+	// #endif
+
+	onLaunch(() => {
+		dbInit()
+	})
+
+	// #ifdef APP-ANDROID || APP-HARMONY
+	onLastPageBackPress(() => {
+		if (firstBackTime == 0) {
+			uni.showToast({
+				title: '再按一次退出应用',
+				position: 'bottom',
+			})
+			firstBackTime = Date.now()
+			setTimeout(() => {
+				firstBackTime = 0
+			}, 2000)
+		} else if (Date.now() - firstBackTime < 2000) {
+			firstBackTime = Date.now()
+			uni.exit()
+		}
+	})
+	// #endif
+</script>
+
+<style>
+	/* 设计稿字体：Noto Serif SC（界面文字）/ IBM Plex Serif（数字、化学式），每个字重单独一个字体族 */
+	@font-face {
+		font-family: ns4;
+		src: url('/static/fonts/ns4.ttf');
+	}
+
+	@font-face {
+		font-family: ns5;
+		src: url('/static/fonts/ns5.ttf');
+	}
+
+	@font-face {
+		font-family: ns7;
+		src: url('/static/fonts/ns7.ttf');
+	}
+
+	@font-face {
+		font-family: px4;
+		src: url('/static/fonts/px4.ttf');
+	}
+
+	@font-face {
+		font-family: px5;
+		src: url('/static/fonts/px5.ttf');
+	}
+
+	@font-face {
+		font-family: px6;
+		src: url('/static/fonts/px6.ttf');
+	}
+
+	.ns4 {
+		font-family: ns4;
+	}
+
+	.ns5 {
+		font-family: ns5;
+	}
+
+	.ns7 {
+		font-family: ns7;
+	}
+
+	.px4 {
+		font-family: px4;
+	}
+
+	.px5 {
+		font-family: px5;
+	}
+
+	.px6 {
+		font-family: px6;
+	}
+
+	/* 字号 + 行高：取自设计稿在 Chrome 中 line-height: normal 的实测行盒高度 */
+	.t10 {
+		font-size: 10px;
+		line-height: 15px;
+	}
+
+	.t11 {
+		font-size: 11px;
+		line-height: 16px;
+	}
+
+	.t12 {
+		font-size: 12px;
+		line-height: 17px;
+	}
+
+	.t13 {
+		font-size: 13px;
+		line-height: 19px;
+	}
+
+	.t14 {
+		font-size: 14px;
+		line-height: 20px;
+	}
+
+	.t15 {
+		font-size: 15px;
+		line-height: 21px;
+	}
+
+	.t16 {
+		font-size: 16px;
+		line-height: 23px;
+	}
+
+	.t17 {
+		font-size: 17px;
+		line-height: 25px;
+	}
+
+	.t20 {
+		font-size: 20px;
+		line-height: 29px;
+	}
+
+	.t22 {
+		font-size: 22px;
+		line-height: 31px;
+	}
+
+	.t26 {
+		font-size: 26px;
+		line-height: 37px;
+	}
+
+	/* 颜色 */
+	.c-ink {
+		color: #16191B;
+	}
+
+	.c-mut {
+		color: #4F555A;
+	}
+
+	.c-hint {
+		color: #62686C;
+	}
+
+	.c-blue {
+		color: #1F5FAD;
+	}
+
+	.c-amber {
+		color: #8A4B00;
+	}
+
+	.c-paper {
+		color: #F3F4F1;
+	}
+
+	.c-fog {
+		color: #AEB4B8;
+	}
+
+	.c-dim {
+		color: #8C959C;
+	}
+
+	.c-gold {
+		color: #F2B35A;
+	}
+
+	.c-white {
+		color: #FFFFFF;
+	}
+
+	/* 布局 */
+	.row {
+		flex-direction: row;
+	}
+
+	.aic {
+		align-items: center;
+	}
+
+	.jcc {
+		justify-content: center;
+	}
+
+	.jsb {
+		justify-content: space-between;
+	}
+
+	.f1 {
+		flex: 1;
+	}
+
+	.nowrap {
+		white-space: nowrap;
+	}
+
+	/* 卡片 / 标题 / 标签 */
+	.card {
+		background-color: #FFFFFF;
+		border: 1px solid #DCDFD8;
+		border-radius: 16px;
+		padding: 16px;
+	}
+
+	/* 设计稿 h1 行高 1.25（35px）小于字体自然行高（40px）：Chrome 居中、Android 贴底，
+	   这里用自然行高 + 上下 -2.5px 外边距，得到与设计稿相同的盒高和基线 */
+	.h1 {
+		font-family: ns7;
+		font-size: 28px;
+		line-height: 40px;
+		margin-top: -2.5px;
+		margin-bottom: -2.5px;
+		color: #16191B;
+	}
+
+	.h2 {
+		font-family: ns7;
+		font-size: 15px;
+		line-height: 21px;
+		color: #16191B;
+	}
+
+	.lbl {
+		font-family: ns4;
+		font-size: 13px;
+		line-height: 19px;
+		color: #4F555A;
+	}
+
+	/* 输入框外框（聚焦态由 .fld-on 叠加） */
+	.fld {
+		flex-direction: row;
+		align-items: center;
+		height: 48px;
+		border: 1px solid #C9CDC5;
+		border-radius: 10px;
+		padding: 0 14px;
+		background-color: #FFFFFF;
+	}
+
+	.fld-lg {
+		height: 52px;
+	}
+
+	/* 覆盖在数值输入框上：轻点 → 聚焦输入框；长按 → 唤出旋钮（原生输入框会吞掉触摸事件） */
+	.lp-cover {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+	}
+
+	.fld-on {
+		border-color: #1F5FAD;
+		box-shadow: 0 0 0 3px rgba(31, 95, 173, 0.18);
+	}
+
+	.inp {
+		flex: 1;
+		height: 44px;
+		font-family: px4;
+		font-size: 17px;
+		color: #16191B;
+		background-color: transparent;
+	}
+
+	.inp-lg {
+		height: 48px;
+		font-family: px5;
+		font-size: 20px;
+	}
+
+	/* 选项块（chip） */
+	.chip {
+		flex: 1;
+		height: 44px;
+		border-radius: 10px;
+		border: 1px solid #C9CDC5;
+		background-color: #FFFFFF;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.chip-on {
+		border-color: #16191B;
+		background-color: #16191B;
+	}
+
+	.chip-t {
+		font-family: px5;
+		font-size: 13px;
+		line-height: 19px;
+		color: #16191B;
+	}
+
+	.chip-t-on {
+		color: #F3F4F1;
+	}
+
+	/* 扫描按钮 */
+	.scan-btn {
+		flex-direction: row;
+		align-items: center;
+		height: 44px;
+		padding: 0 14px;
+		border-radius: 12px;
+		background-color: #E3ECF7;
+	}
+
+	.ico20 {
+		width: 20px;
+		height: 20px;
+	}
+
+	.ico16 {
+		width: 16px;
+		height: 16px;
+	}
+</style>

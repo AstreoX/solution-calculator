@@ -1,0 +1,389 @@
+// 离线化合物库：/static/db 下的分片 JSON（格式见 tools/db）
+// - reagents.json  常用试剂（启动时同步载入）
+// - density.json   常见溶液 质量分数—密度 表
+// - c/NNN.json     化合物表，每片 1000 条：[formula, zh, en, cas, M, rank]
+// - n/NNN.json     名称索引 {nameKey: [id...]}，256 片
+// - h/NNN.json     Hill 式索引 {hillKey: [id...]}，128 片
+import { normF, hillKey, molarMass } from './chem.uts'
+
+export type Compound = {
+	f : string
+	zh : string
+	en : string
+	cas : string
+	M : number
+	rank : number
+	kind : string // solid | liquid | ''
+	w : number // 液体试剂的标签质量分数（%），0 表示无
+	wLo : number
+	wHi : number
+	rho : number // g/mL，0 表示无
+}
+
+type DensityTable = {
+	pts : number[][]
+}
+
+const NAME_SHARDS = 256
+const HILL_SHARDS = 128
+const CHUNK = 1000
+
+// 异步数据到达时 +1，页面里依赖它的 computed 会重新计算
+export const dbTick = ref(0)
+
+const reagents : Compound[] = []
+const byFormula = new Map<string, Compound>() // normF(f) → 常用试剂
+const byName = new Map<string, Compound[]>() // nameKey → 常用试剂
+const byHill = new Map<string, Compound[]>()
+const density = new Map<string, DensityTable>()
+
+const nameShardCache = new Map<number, UTSJSONObject>()
+const hillShardCache = new Map<number, UTSJSONObject>()
+const chunkCache = new Map<number, any[]>()
+const pending = new Set<string>()
+const nameResult = new Map<string, Compound[]>() // nameKey → 结果（空数组 = 未找到）
+const hillResult = new Map<string, Compound[]>()
+
+let inited = false
+
+export function nameKey(s : string) : string {
+	let out = ''
+	for (let i = 0; i < s.length; i++) {
+		let c = s.charCodeAt(i)!
+		if (c >= 0xff01 && c <= 0xff5e) c = c - 0xfee0
+		if (c == 0x3000) c = 32
+		if (c == 32 || c == 9 || c == 10 || c == 13 || c == 0xa0) continue
+		if (c >= 65 && c <= 90) c = c + 32
+		out += String.fromCharCode(c)
+	}
+	return out
+}
+
+export function shardOf(key : string, n : number) : number {
+	let h = 0
+	for (let i = 0; i < key.length; i++) {
+		h = (h * 31 + key.charCodeAt(i)!) % 1000000007
+	}
+	return h % n
+}
+
+function pad3(n : number) : string {
+	const s = n.toFixed(0)
+	return s.length >= 3 ? s : (s.length == 2 ? '0' + s : '00' + s)
+}
+
+function readText(path : string) : string | null {
+	try {
+		const fs = uni.getFileSystemManager()
+		const r = fs.readFileSync(path, 'utf-8')
+		return r as string
+	} catch (e) {
+		return null
+	}
+}
+
+function readTextAsync(path : string, cb : (text : string | null) => void) {
+	const fs = uni.getFileSystemManager()
+	fs.readFile({
+		filePath: path,
+		encoding: 'utf-8',
+		success: (res : ReadFileSuccessResult) => {
+			cb(res.data as string)
+		},
+		fail: (ev : IFileSystemManagerFail) => {
+			cb(null)
+		}
+	} as ReadFileOptions)
+}
+
+function numOr(o : UTSJSONObject, k : string, d : number) : number {
+	const v = o.getNumber(k)
+	return v == null ? d : v
+}
+
+function strOr(o : UTSJSONObject, k : string) : string {
+	const v = o.getString(k)
+	return v == null ? '' : v
+}
+
+function addIdx(m : Map<string, Compound[]>, k : string, c : Compound) {
+	if (k.length == 0) return
+	const a = m.get(k)
+	if (a == null) m.set(k, [c])
+	else if (a.indexOf(c) < 0) a.push(c)
+}
+
+export function dbInit() {
+	if (inited) return
+	inited = true
+	const txt = readText('/static/db/reagents.json')
+	if (txt != null) {
+		const arr = JSON.parseArray<UTSJSONObject>(txt)
+		if (arr != null) {
+			for (let i = 0; i < arr.length; i++) {
+				const o = arr[i] as UTSJSONObject
+				const f = strOr(o, 'f')
+				let M = numOr(o, 'M', 0)
+				if (M <= 0) {
+					const mm = molarMass(f)
+					M = mm == null ? 0 : mm
+				}
+				const wr = o.getArray<number>('wRange')
+				const c : Compound = {
+					f: f, zh: strOr(o, 'zh'), en: strOr(o, 'en'), cas: strOr(o, 'cas'), M: M, rank: 1000000,
+					kind: strOr(o, 'kind'), w: numOr(o, 'w', 0),
+					wLo: wr != null && wr.length == 2 ? wr[0] : 0, wHi: wr != null && wr.length == 2 ? wr[1] : 0,
+					rho: numOr(o, 'rho', 0)
+				}
+				reagents.push(c)
+				const nf = normF(f)
+				if (!byFormula.has(nf)) byFormula.set(nf, c)
+				addIdx(byName, nameKey(c.zh), c)
+				addIdx(byName, nameKey(c.en), c)
+				addIdx(byName, nameKey(c.cas), c)
+				const al = o.getArray<string>('alias')
+				if (al != null) {
+					for (let k = 0; k < al.length; k++) addIdx(byName, nameKey(al[k]), c)
+				}
+				const hk = hillKey(f)
+				if (hk != null) addIdx(byHill, hk, c)
+			}
+		}
+	}
+	const dtxt = readText('/static/db/density.json')
+	if (dtxt != null) {
+		const o = JSON.parseObject(dtxt)
+		if (o != null) {
+			const keys = UTSJSONObject.keys(o)
+			for (let i = 0; i < keys.length; i++) {
+				const t = o.getJSON(keys[i])
+				if (t == null) continue
+				const pts = t.getArray<any>('pts')
+				if (pts == null) continue
+				const list : number[][] = []
+				for (let k = 0; k < pts.length; k++) {
+					const p = pts[k] as any[]
+					list.push([p[0] as number, p[1] as number])
+				}
+				density.set(normF(keys[i]), { pts: list } as DensityTable)
+			}
+		}
+	}
+}
+
+export function allReagents() : Compound[] {
+	return reagents
+}
+
+// —— 化合物分片 ——
+function recToCompound(rec : any[]) : Compound {
+	return {
+		f: rec[0] as string, zh: rec[1] as string, en: rec[2] as string, cas: rec[3] as string,
+		M: rec[4] as number, rank: rec[5] as number, kind: '', w: 0, wLo: 0, wHi: 0, rho: 0
+	} as Compound
+}
+
+function loadChunk(ci : number, cb : (arr : any[] | null) => void) {
+	const hit = chunkCache.get(ci)
+	if (hit != null) {
+		cb(hit)
+		return
+	}
+	readTextAsync('/static/db/c/' + pad3(ci) + '.json', (t : string | null) => {
+		if (t == null) {
+			cb(null)
+			return
+		}
+		const arr = JSON.parseArray<any>(t)
+		if (arr == null) {
+			cb(null)
+			return
+		}
+		chunkCache.set(ci, arr)
+		cb(arr)
+	})
+}
+
+function loadIds(ids : number[], cb : (list : Compound[]) => void) {
+	const out : Compound[] = []
+	let left = ids.length
+	if (left == 0) {
+		cb(out)
+		return
+	}
+	const slots : (Compound | null)[] = []
+	for (let i = 0; i < ids.length; i++) slots.push(null)
+	for (let i = 0; i < ids.length; i++) {
+		const id = ids[i]
+		const idx = i
+		loadChunk(Math.floor(id / CHUNK), (arr : any[] | null) => {
+			if (arr != null) {
+				const r = arr[id % CHUNK]
+				if (r != null) slots[idx] = recToCompound(r as any[])
+			}
+			left--
+			if (left == 0) {
+				for (let k = 0; k < slots.length; k++) {
+					const s = slots[k]
+					if (s != null) out.push(s)
+				}
+				cb(out)
+			}
+		})
+	}
+}
+
+function loadShard(dir : string, cache : Map<number, UTSJSONObject>, si : number, cb : (o : UTSJSONObject | null) => void) {
+	const hit = cache.get(si)
+	if (hit != null) {
+		cb(hit)
+		return
+	}
+	readTextAsync('/static/db/' + dir + '/' + pad3(si) + '.json', (t : string | null) => {
+		if (t == null) {
+			cb(null)
+			return
+		}
+		const o = JSON.parseObject(t)
+		if (o != null) cache.set(si, o)
+		cb(o)
+	})
+}
+
+function idsFrom(o : UTSJSONObject | null, key : string, max : number) : number[] {
+	const out : number[] = []
+	if (o == null) return out
+	const a = o.getArray<number>(key)
+	if (a == null) return out
+	for (let i = 0; i < a.length && i < max; i++) out.push(a[i])
+	return out
+}
+
+function bump() {
+	dbTick.value = dbTick.value + 1
+}
+
+// 按名称 / CAS 查询（异步，结果写入缓存并触发 dbTick）
+export function queryName(q : string, cb : ((list : Compound[]) => void) | null) {
+	const k = nameKey(q)
+	if (k.length == 0) return
+	const done = nameResult.get(k)
+	if (done != null) {
+		if (cb != null) cb(done)
+		return
+	}
+	if (pending.has('n:' + k)) return
+	pending.add('n:' + k)
+	loadShard('n', nameShardCache, shardOf(k, NAME_SHARDS), (o : UTSJSONObject | null) => {
+		loadIds(idsFrom(o, k, 8), (list : Compound[]) => {
+			pending.delete('n:' + k)
+			nameResult.set(k, list)
+			bump()
+			if (cb != null) cb(list)
+		})
+	})
+}
+
+export function queryHill(hk : string, cb : ((list : Compound[]) => void) | null) {
+	const done = hillResult.get(hk)
+	if (done != null) {
+		if (cb != null) cb(done)
+		return
+	}
+	if (pending.has('h:' + hk)) return
+	pending.add('h:' + hk)
+	loadShard('h', hillShardCache, shardOf(hk, HILL_SHARDS), (o : UTSJSONObject | null) => {
+		loadIds(idsFrom(o, hk, 6), (list : Compound[]) => {
+			pending.delete('h:' + hk)
+			hillResult.set(hk, list)
+			bump()
+			if (cb != null) cb(list)
+		})
+	})
+}
+
+// —— 同步查询（命中常用试剂或已缓存的分片结果；未命中时发起异步查询并返回 null）——
+
+// 化学式 → 中文名（用于「氯化钠 · 58.44 g/mol」这类说明）
+export function zhNameOf(formula : string) : string {
+	const nf = normF(formula)
+	if (nf.length == 0) return ''
+	const r = byFormula.get(nf)
+	if (r != null && r.zh.length > 0) return r.zh
+	const hk = hillKey(formula)
+	if (hk == null) return ''
+	const h = byHill.get(hk)
+	if (h != null && h.length > 0 && h[0].zh.length > 0) return h[0].zh
+	const list = hillResult.get(hk)
+	if (list == null) {
+		queryHill(hk, null)
+		return ''
+	}
+	for (let i = 0; i < list.length; i++) {
+		if (list[i].zh.length > 0) return list[i].zh
+	}
+	return ''
+}
+
+export function reagentByFormula(formula : string) : Compound | null {
+	const r = byFormula.get(normF(formula))
+	return r == null ? null : r
+}
+
+// 名称 / CAS → 化合物；只查本地（常用试剂 + 已载入的分片），未命中时后台查询
+export function compoundByName(q : string) : Compound | null {
+	const k = nameKey(q)
+	if (k.length == 0) return null
+	const r = byName.get(k)
+	if (r != null && r.length > 0) return r[0]
+	const list = nameResult.get(k)
+	if (list == null) {
+		queryName(q, null)
+		return null
+	}
+	return list.length > 0 ? list[0] : null
+}
+
+function hasCJK(s : string) : boolean {
+	for (let i = 0; i < s.length; i++) {
+		const c = s.charCodeAt(i)!
+		if (c >= 0x3400 && c <= 0x9fff) return true
+	}
+	return false
+}
+
+// 在一段文字（如标签上的一行）里找出现的常用试剂中文名，取最长的匹配
+export function matchReagentInText(text : string) : Compound | null {
+	const t = nameKey(text)
+	let best : Compound | null = null
+	let bestLen = 1
+	byName.forEach((list : Compound[], k : string) => {
+		if (k.length > bestLen && hasCJK(k) && t.indexOf(k) >= 0 && list.length > 0) {
+			best = list[0]
+			bestLen = k.length
+		}
+	})
+	return best
+}
+
+export function nameLookupDone(q : string) : boolean {
+	const k = nameKey(q)
+	if (byName.has(k)) return true
+	return nameResult.has(k)
+}
+
+// 质量分数 w(%) → 密度（线性插值），无表返回 0
+export function densityAt(formula : string, w : number) : number {
+	const t = density.get(normF(formula))
+	if (t == null) return 0
+	const p = t.pts
+	if (p.length == 0) return 0
+	if (w <= p[0][0]) return p[0][1]
+	for (let i = 1; i < p.length; i++) {
+		if (w <= p[i][0]) {
+			const a = p[i - 1], b = p[i]
+			return a[1] + (b[1] - a[1]) * (w - a[0]) / (b[0] - a[0])
+		}
+	}
+	return p[p.length - 1][1]
+}

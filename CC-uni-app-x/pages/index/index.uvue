@@ -1,0 +1,66 @@
+<template>
+	<view ref="pageRef" class="page">
+		<prep-pane v-show="tab == 'prep'" class="fill" @go="go"></prep-pane>
+		<dilu-pane v-show="tab == 'dilu'" class="fill" @go="go"></dilu-pane>
+		<multi-pane v-show="tab == 'multi'" class="fill" @go="go"></multi-pane>
+		<update-sheet></update-sheet>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { DEMO } from '@/common/config.uts'
+	import { dumpLayout, selfTest } from '@/common/debug.uts'
+	import { noSuggestTree } from '@/common/native.uts'
+	import { upd, checkOnLaunch, closeSheet } from '@/common/update.uts'
+
+	const tab = ref('prep')
+	const pageRef = ref<UniElement | null>(null)
+
+	function scheduleDump() {
+		if (!DEMO) return
+		setTimeout(() => {
+			dumpLayout(tab.value, pageRef.value)
+		}, 1800)
+	}
+
+	function go(t : string) {
+		uni.hideKeyboard()
+		tab.value = t
+		scheduleDump()
+	}
+
+	onReady(() => {
+		setTimeout(() => {
+			noSuggestTree(pageRef.value)
+		}, 300)
+		scheduleDump()
+		if (DEMO) selfTest()
+		// 首屏渲染完再联网检查更新和公告
+		setTimeout(() => {
+			checkOnLaunch()
+		}, 1200)
+	})
+
+	onBackPress((options : OnBackPressOptions) : boolean | null => {
+		if (upd.sheet.length > 0) {
+			closeSheet()
+			return true
+		}
+		return false
+	})
+</script>
+
+<style>
+	.page {
+		flex: 1;
+		background-color: #F3F4F1;
+	}
+
+	.fill {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+	}
+</style>

@@ -1,0 +1,94 @@
+// 组件之间共享的类型
+
+export type Fact = {
+	k : string
+	v : string
+	c : string
+}
+
+export type Tag = {
+	text : string
+	fg : string
+	bg : string
+}
+
+export type Dock = {
+	verb : string
+	subject : string
+	value : string
+	unit : string
+	tags : Tag[]
+	facts : Fact[]
+	hasWarn : boolean
+	warn : string
+}
+
+export type Chip = {
+	label : string
+	on : boolean
+}
+
+export type DialSpec = {
+	type : string // conc | vol | lin
+	min : number
+	max : number
+	start : number
+	coarse : number
+	fine : number
+}
+
+// 扫描识别「填入」时带回的字段（空字符串表示没有）
+export type ScanValue = {
+	name : string
+	formula : string
+	purity : string
+	grade : string
+	w : string
+	rho : string
+	conc : string
+	unit : string
+}
+
+export type Run = {
+	t : string
+	cjk : boolean
+}
+
+export function F(k : string, v : string, hot : boolean) : Fact {
+	return { k: k, v: v, c: hot ? '#F2B35A' : '#F3F4F1' } as Fact
+}
+
+export function T(text : string, kind : string) : Tag {
+	return kind == 'warn' ? ({ text: text, fg: '#16191B', bg: '#F2B35A' } as Tag) : ({ text: text, fg: '#F2B35A', bg: 'rgba(242, 179, 90, 0.16)' } as Tag)
+}
+
+export function concSpec(start : number) : DialSpec {
+	return { type: 'conc', min: 0.000001, max: 1000, start: start, coarse: 0, fine: 0 } as DialSpec
+}
+
+export function volSpec(start : number) : DialSpec {
+	return { type: 'vol', min: 1, max: 5000, start: start, coarse: 0, fine: 0 } as DialSpec
+}
+
+export function linSpec(coarse : number, fine : number, min : number, max : number, start : number) : DialSpec {
+	return { type: 'lin', min: min, max: max, start: start, coarse: coarse, fine: fine } as DialSpec
+}
+
+// 设计稿里 IBM Plex Serif 文本中由 Noto Serif SC 绘制的字符（中文、全角标点，以及 ≈ ≥ ≤ → ↔ ▲ △ μ ρ）
+function needsNoto(c : number) : boolean {
+	if (c >= 0x2e80) return true
+	return c == 0x2248 || c == 0x2265 || c == 0x2264 || c == 0x2192 || c == 0x2194 || c == 0x25b2 || c == 0x25b3 || c == 0x3bc || c == 0x3c1
+}
+
+// 把字符串按「是否需要中文字体」切成片段：IBM Plex Serif 没有中文字形，
+// 浏览器会回落到 Noto Serif SC，原生端需要手动切换字体
+export function runs(s : string) : Run[] {
+	const out : Run[] = []
+	for (let i = 0; i < s.length; i++) {
+		const c = s.charCodeAt(i)!
+		const cjk = needsNoto(c)
+		if (out.length > 0 && out[out.length - 1].cjk == cjk) out[out.length - 1].t += s.charAt(i)
+		else out.push({ t: s.charAt(i), cjk: cjk } as Run)
+	}
+	return out
+}

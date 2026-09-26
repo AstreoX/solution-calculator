@@ -1,0 +1,320 @@
+// 标签 OCR：把照片发给配置好的 OCR 服务，返回逐行文字（有位置信息时一并返回）
+import { OCR, ocrEnabled } from './config.uts'
+import { vlm, vlmReady, vlmChatUrl, applyProviderParams, providerHeaders } from './settings.uts'
+
+export type OcrLine = {
+	text : string
+	x : number // 位置（原图像素）；无位置信息时 w = 0
+	y : number
+	w : number
+	h : number
+}
+
+export type OcrResult = {
+	lines : OcrLine[]
+	imgW : number
+	imgH : number
+	fields : UTSJSONObject | null // 视觉模型直接给出的字段（name / formula / M / purity / wLow / wHigh / rho / grade / conc / unit）
+}
+
+type OcrCb = (res : OcrResult | null, err : string) => void
+
+let baiduToken = ''
+let baiduTokenExp = 0
+
+function line(text : string, x : number, y : number, w : number, h : number) : OcrLine {
+	return { text: text, x: x, y: y, w: w, h: h } as OcrLine
+}
+
+function readBase64(path : string, cb : (b64 : string | null) => void) {
+	uni.getFileSystemManager().readFile({
+		filePath: path,
+		encoding: 'base64',
+		success: (res : ReadFileSuccessResult) => {
+			cb(res.data as string)
+		},
+		fail: (ev : IFileSystemManagerFail) => {
+			cb(null)
+		}
+	} as ReadFileOptions)
+}
+
+// 先压缩到长边约 1600px 再上传，记录原图尺寸用于画识别框
+function prepare(path : string, cb : (p : string, w : number, h : number) => void) {
+	uni.getImageInfo({
+		src: path,
+		success: (info : GetImageInfoSuccess) => {
+			const w = info.width, h = info.height
+			const long = Math.max(w, h)
+			if (long <= 1800) {
+				cb(path, w, h)
+				return
+			}
+			const scale = 1600 / long
+			uni.compressImage({
+				src: path,
+				quality: 85,
+				compressedWidth: Math.round(w * scale),
+				compressedHeight: Math.round(h * scale),
+				success: (r : CompressImageSuccess) => {
+					cb(r.tempFilePath, Math.round(w * scale), Math.round(h * scale))
+				},
+				fail: (ev : IMediaError) => {
+					cb(path, w, h)
+				}
+			} as CompressImageOptions)
+		},
+		fail: (ev : GetImageInfoFail) => {
+			cb(path, 0, 0)
+		}
+	} as GetImageInfoOptions)
+}
+
+export function ocrAvailable() : boolean {
+	return (vlmReady() && vlm.ocrOn) || ocrEnabled()
+}
+
+export function runOcr(path : string, cb : OcrCb) {
+	const useVlm = vlmReady() && vlm.ocrOn
+	if (!useVlm && !ocrEnabled()) {
+		cb(null, '未配置识别模型，请点首页右上角齿轮设置，或手动填写')
+		return
+	}
+	prepare(path, (p : string, w : number, h : number) => {
+		readBase64(p, (b64 : string | null) => {
+			if (b64 == null) {
+				cb(null, '读取照片失败')
+				return
+			}
+			const prov = OCR.provider
+			if (useVlm) vlmOcr(b64, w, h, cb)
+			else if (prov == 'baidu') baidu(b64, w, h, cb)
+			else if (prov == 'custom') custom(b64, w, h, cb)
+			else openaiVision(b64, w, h, cb)
+		})
+	})
+}
+
+// —— 设置页里的视觉模型：一次返回逐行文字（含归一化位置）和结构化字段 ——
+const VLM_PROMPT = '这是一张化学试剂瓶或试剂标签的照片。请只输出一个 JSON 对象（不要 Markdown 代码块、不要解释），包含两部分：\n' +
+	'1. lines：逐行、原样转写标签上的全部文字，每行给出 text 和它在图片中的位置 box=[x0,y0,x1,y1]，坐标按图片宽高归一化到 0~1000 的整数；\n' +
+	'2. fields：从标签中提取的字段，没有就填空字符串：name（试剂中文名，如 硫酸铜）、formula（化学式，用普通数字和 · 书写，如 CuSO4·5H2O）、' +
+	'M（标签上的分子量数字）、purity（含量或纯度，只写数字，范围写下限，如 99.0）、wLow 和 wHigh（液体试剂质量分数范围的数字，如 36.0 和 38.0；只有一个值时两者相同）、' +
+	'rho（密度，g/mL 的数字）、grade（规格，如 AR 分析纯）、conc（溶液浓度数字）、unit（浓度单位：mol/L、mmol/L、µmol/L、g/L、% 或 ×）。\n' +
+	'JSON 格式：{"lines":[{"text":"","box":[0,0,0,0]}],"fields":{"name":"","formula":"","M":"","purity":"","wLow":"","wHigh":"","rho":"","grade":"","conc":"","unit":""}}'
+
+function jsonIn(content : string) : UTSJSONObject | null {
+	const a = content.indexOf('{')
+	const b = content.lastIndexOf('}')
+	if (a < 0 || b <= a) return null
+	return JSON.parseObject(content.substring(a, b + 1))
+}
+
+function vlmOcr(b64 : string, w : number, h : number, cb : OcrCb) {
+	const base = vlm.baseUrl
+	const imgPart = { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + b64 } as UTSJSONObject } as UTSJSONObject
+	const txtPart = { type: 'text', text: VLM_PROMPT } as UTSJSONObject
+	const body = {
+		model: vlm.model,
+		temperature: 0,
+		messages: [{ role: 'user', content: [txtPart, imgPart] } as UTSJSONObject]
+	} as UTSJSONObject
+	// 识别要快：关闭推理，要求 JSON 输出
+	applyProviderParams(body, base, 'ocr')
+	const header = providerHeaders(base, vlm.apiKey)
+	const t0 = Date.now()
+	uni.request<UTSJSONObject>({
+		url: vlmChatUrl(base),
+		method: 'POST',
+		header: header,
+		data: body,
+		timeout: 60000,
+		success: (res : RequestSuccess<UTSJSONObject>) => {
+			const d = res.data
+			if (res.statusCode != 200 || d == null) {
+				cb(null, '识别模型返回错误（' + res.statusCode.toFixed(0) + '）')
+				return
+			}
+			const ch = d.getArray<UTSJSONObject>('choices')
+			const msg = ch == null || ch.length == 0 ? null : ch[0].getJSON('message')
+			const content = msg == null ? '' : msg.getString('content', '')
+			console.log('VLM OCR ok', Date.now() - t0, 'ms', d.getString('provider', ''))
+			const o = jsonIn(content)
+			const lines : OcrLine[] = []
+			if (o == null) {
+				// 模型没按 JSON 输出：按纯文本逐行处理
+				const parts = content.split('\n')
+				for (let i = 0; i < parts.length; i++) {
+					const t = parts[i].replace(/^[\s\-*•`#>]+/, '').trim()
+					if (t.length > 0 && t != '```') lines.push(line(t, 0, 0, 0, 0))
+				}
+				cb({ lines: lines, imgW: w, imgH: h, fields: null } as OcrResult, '')
+				return
+			}
+			const arr = o.getArray<UTSJSONObject>('lines')
+			if (arr != null) {
+				for (let i = 0; i < arr.length; i++) {
+					const t = arr[i].getString('text', '').trim()
+					if (t.length == 0) continue
+					const bx = arr[i].getArray<number>('box')
+					if (bx != null && bx.length == 4 && w > 0 && h > 0 && bx[2] > bx[0] && bx[3] > bx[1] && bx[2] <= 1000 && bx[3] <= 1000) {
+						lines.push(line(t, bx[0] / 1000 * w, bx[1] / 1000 * h, (bx[2] - bx[0]) / 1000 * w, (bx[3] - bx[1]) / 1000 * h))
+					} else {
+						lines.push(line(t, 0, 0, 0, 0))
+					}
+				}
+			}
+			cb({ lines: lines, imgW: w, imgH: h, fields: o.getJSON('fields') } as OcrResult, '')
+		},
+		fail: (e : RequestFail) => {
+			console.log('VLM OCR failed', e.errCode, e.errMsg)
+			cb(null, '网络不可用或识别超时')
+		}
+	})
+}
+
+// —— OpenAI 兼容视觉模型（config.uts 配置）——
+const OCR_PROMPT = '这是一张化学试剂瓶或试剂标签的照片。请逐行、原样转写照片中标签上的全部文字（含化学式、含量、密度、分子量、浓度、规格等），' +
+	'每行输出一条，保持原有的数字、单位和符号，化学式用普通数字写（如 CuSO4·5H2O）。只输出转写的文字，不要解释。'
+
+function openaiVision(b64 : string, w : number, h : number, cb : OcrCb) {
+	const url = OCR.baseUrl.replace(/\/+$/, '') + '/chat/completions'
+	const imgPart = { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + b64 } as UTSJSONObject } as UTSJSONObject
+	const txtPart = { type: 'text', text: OCR_PROMPT } as UTSJSONObject
+	const body = {
+		model: OCR.model,
+		temperature: 0,
+		messages: [{ role: 'user', content: [txtPart, imgPart] } as UTSJSONObject]
+	} as UTSJSONObject
+	const header = { 'Content-Type': 'application/json' } as UTSJSONObject
+	if (OCR.apiKey.length > 0) header.set('Authorization', 'Bearer ' + OCR.apiKey)
+	uni.request<UTSJSONObject>({
+		url: url,
+		method: 'POST',
+		header: header,
+		data: body,
+		timeout: OCR.timeoutMs,
+		success: (res : RequestSuccess<UTSJSONObject>) => {
+			const d = res.data
+			if (res.statusCode != 200 || d == null) {
+				cb(null, '识别服务返回错误（' + res.statusCode.toFixed(0) + '）')
+				return
+			}
+			const ch = d.getArray<UTSJSONObject>('choices')
+			if (ch == null || ch.length == 0) {
+				cb(null, '识别服务无结果')
+				return
+			}
+			const msg = ch[0].getJSON('message')
+			const content = msg == null ? '' : msg.getString('content', '')
+			const lines : OcrLine[] = []
+			const parts = content.split('\n')
+			for (let i = 0; i < parts.length; i++) {
+				const t = parts[i].replace(/^[\s\-*•`#>]+/, '').trim()
+				if (t.length > 0 && t != '```') lines.push(line(t, 0, 0, 0, 0))
+			}
+			cb({ lines: lines, imgW: w, imgH: h, fields: null } as OcrResult, '')
+		},
+		fail: (e : RequestFail) => {
+			console.log('OCR request failed', e.errCode, e.errMsg)
+			cb(null, '网络不可用，无法识别')
+		}
+	})
+}
+
+// —— 百度 OCR（高精度含位置版）——
+function baiduWithToken(cb : (tok : string | null) => void) {
+	if (baiduToken.length > 0 && Date.now() < baiduTokenExp) {
+		cb(baiduToken)
+		return
+	}
+	const url = 'https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=' +
+		encodeURIComponent(OCR.baiduApiKey) + '&client_secret=' + encodeURIComponent(OCR.baiduSecretKey)
+	uni.request<UTSJSONObject>({
+		url: url,
+		method: 'POST',
+		timeout: 10000,
+		success: (res : RequestSuccess<UTSJSONObject>) => {
+			const d = res.data
+			const tok = d == null ? '' : d.getString('access_token', '')
+			if (tok.length == 0) {
+				cb(null)
+				return
+			}
+			baiduToken = tok
+			baiduTokenExp = Date.now() + 20 * 24 * 3600 * 1000
+			cb(tok)
+		},
+		fail: (ev : RequestFail) => {
+			cb(null)
+		}
+	})
+}
+
+function baidu(b64 : string, w : number, h : number, cb : OcrCb) {
+	baiduWithToken((tok : string | null) => {
+		if (tok == null) {
+			cb(null, '识别服务鉴权失败')
+			return
+		}
+		uni.request<UTSJSONObject>({
+			url: 'https://aip.baidubce.com/rest/2.0/ocr/v1/accurate?access_token=' + tok,
+			method: 'POST',
+			header: { 'Content-Type': 'application/x-www-form-urlencoded' } as UTSJSONObject,
+			data: 'image=' + encodeURIComponent(b64) + '&paragraph=false',
+			timeout: OCR.timeoutMs,
+			success: (res : RequestSuccess<UTSJSONObject>) => {
+				const d = res.data
+				const arr = d == null ? null : d.getArray<UTSJSONObject>('words_result')
+				if (arr == null) {
+					cb(null, '识别失败')
+					return
+				}
+				const lines : OcrLine[] = []
+				for (let i = 0; i < arr.length; i++) {
+					const loc = arr[i].getJSON('location')
+					lines.push(line(arr[i].getString('words', ''),
+						loc == null ? 0 : loc.getNumber('left', 0), loc == null ? 0 : loc.getNumber('top', 0),
+						loc == null ? 0 : loc.getNumber('width', 0), loc == null ? 0 : loc.getNumber('height', 0)))
+				}
+				cb({ lines: lines, imgW: w, imgH: h, fields: null } as OcrResult, '')
+			},
+			fail: (ev : RequestFail) => {
+				console.log('OCR request failed', ev.errCode, ev.errMsg)
+				cb(null, '网络不可用，无法识别')
+			}
+		})
+	})
+}
+
+// —— 自建服务 ——
+function custom(b64 : string, w : number, h : number, cb : OcrCb) {
+	const header = { 'Content-Type': 'application/json' } as UTSJSONObject
+	if (OCR.customToken.length > 0) header.set('Authorization', 'Bearer ' + OCR.customToken)
+	uni.request<UTSJSONObject>({
+		url: OCR.customUrl,
+		method: 'POST',
+		header: header,
+		data: { image: b64 } as UTSJSONObject,
+		timeout: OCR.timeoutMs,
+		success: (res : RequestSuccess<UTSJSONObject>) => {
+			const d = res.data
+			const arr = d == null ? null : d.getArray<UTSJSONObject>('lines')
+			if (arr == null) {
+				cb(null, '识别失败')
+				return
+			}
+			const lines : OcrLine[] = []
+			for (let i = 0; i < arr.length; i++) {
+				const bx = arr[i].getArray<number>('box')
+				if (bx != null && bx.length == 4) lines.push(line(arr[i].getString('text', ''), bx[0], bx[1], bx[2], bx[3]))
+				else lines.push(line(arr[i].getString('text', ''), 0, 0, 0, 0))
+			}
+			cb({ lines: lines, imgW: w, imgH: h, fields: null } as OcrResult, '')
+		},
+		fail: (ev : RequestFail) => {
+			console.log('OCR request failed', ev.errCode, ev.errMsg)
+			cb(null, '网络不可用，无法识别')
+		}
+	})
+}

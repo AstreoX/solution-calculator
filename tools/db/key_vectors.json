@@ -1,0 +1,116 @@
+{
+ "formulas": [
+  {
+   "in": "CuSO4·5H2O",
+   "normF": "CuSO4·5H2O",
+   "hillKey": "CuH10O9S",
+   "shard128": 73,
+   "M": 249.677
+  },
+  {
+   "in": "CuSO₄·5H₂O",
+   "normF": "CuSO4·5H2O",
+   "hillKey": "CuH10O9S",
+   "shard128": 73,
+   "M": 249.677
+  },
+  {
+   "in": "CuSO4.5H2O",
+   "normF": "CuSO4·5H2O",
+   "hillKey": "CuH10O9S",
+   "shard128": 73,
+   "M": 249.677
+  },
+  {
+   "in": " CH3COOH ",
+   "normF": "CH3COOH",
+   "hillKey": "C2H4O2",
+   "shard128": 119,
+   "M": 60.052
+  },
+  {
+   "in": "NaCl",
+   "normF": "NaCl",
+   "hillKey": "ClNa",
+   "shard128": 28,
+   "M": 58.44
+  },
+  {
+   "in": "(NH4)2SO4",
+   "normF": "(NH4)2SO4",
+   "hillKey": "H8N2O4S",
+   "shard128": 83,
+   "M": 132.134
+  },
+  {
+   "in": "K4[Fe(CN)6]·3H2O",
+   "normF": "K4[Fe(CN)6]·3H2O",
+   "hillKey": "C6H6FeK4N6O3",
+   "shard128": 22,
+   "M": 422.39
+  },
+  {
+   "in": "C10H14N2Na2O8·2H2O",
+   "normF": "C10H14N2Na2O8·2H2O",
+   "hillKey": "C10H18N2Na2O10",
+   "shard128": 75,
+   "M": 372.238
+  },
+  {
+   "in": "H2C2O4*2H2O",
+   "normF": "H2C2O4·2H2O",
+   "hillKey": "C2H6O6",
+   "shard128": 125,
+   "M": 126.064
+  },
+  {
+   "in": "Na2B4O7•10H2O",
+   "normF": "Na2B4O7·10H2O",
+   "hillKey": "B4H20Na2O17",
+   "shard128": 117,
+   "M": 381.363
+  }
+ ],
+ "names": [
+  {
+   "in": "硫酸铜",
+   "nameKey": "硫酸铜",
+   "shard256": 15
+  },
+  {
+   "in": "五水硫酸铜",
+   "nameKey": "五水硫酸铜",
+   "shard256": 106
+  },
+  {
+   "in": "Copper Sulfate",
+   "nameKey": "coppersulfate",
+   "shard256": 71
+  },
+  {
+   "in": "ＥＤＴＡ　二钠",
+   "nameKey": "edta二钠",
+   "shard256": 210
+  },
+  {
+   "in": "7758-99-8",
+   "nameKey": "7758-99-8",
+   "shard256": 123
+  },
+  {
+   "in": "Tris",
+   "nameKey": "tris",
+   "shard256": 40
+  },
+  {
+   "in": "β-巯基乙醇",
+   "nameKey": "β-巯基乙醇",
+   "shard256": 247
+  },
+  {
+   "in": "𬬻",
+   "nameKey": "𬬻",
+   "shard256": 9
+  }
+ ]
+}

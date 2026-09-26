@@ -1,0 +1,505 @@
+<template>
+	<view class="pane">
+		<scroll-view class="scroller" direction="vertical" :show-scrollbar="false">
+			<view class="content" :style="{ paddingTop: topPad + 'px' }">
+				<view class="header">
+					<text class="h1">稀释</text>
+				</view>
+
+				<!-- 原液与目标 -->
+				<view class="card mt14">
+					<view class="row jsb aic">
+						<text class="h2">原液与目标</text>
+						<view class="scan-btn" @click="openScan">
+							<image class="ico20" src="/static/icons/scan-1F5FAD.svg"></image>
+							<text class="scan-t">扫描原液瓶</text>
+						</view>
+					</view>
+
+					<view class="sublbl mt14">
+						<text class="lbl">原液 C</text>
+						<text class="sub">1</text>
+					</view>
+					<view :class="['fld', 'fld-lg', 'fld-sel', 'mt10', focus == 'c1' ? 'fld-on' : '']">
+						<input :focus="focus == 'c1'" class="inp inp-lg" type="digit" :value="c1" @input="onInput('c1', $event as UniInputEvent)" @focus="focus = 'c1'" @blur="blurField('c1')" />
+						<view v-if="focus != 'c1'" class="lp-cover" @touchstart="lpStart('c1', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('c1')"></view>
+						<unit-select class="ml8" :value="unit1" :ids="UIDS" :labels="ULABELS" :width="92" @change="setUnit1"></unit-select>
+					</view>
+
+					<view class="sublbl mt16">
+						<text class="lbl">目标 C</text>
+						<text class="sub">2</text>
+					</view>
+					<view :class="['fld', 'fld-lg', 'fld-sel', 'mt10', focus == 'c2' ? 'fld-on' : '']">
+						<input :focus="focus == 'c2'" class="inp inp-lg" type="digit" :value="c2" @input="onInput('c2', $event as UniInputEvent)" @focus="focus = 'c2'" @blur="blurField('c2')" />
+						<view v-if="focus != 'c2'" class="lp-cover" @touchstart="lpStart('c2', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('c2')"></view>
+						<unit-select class="ml8" :value="unit2" :ids="UIDS" :labels="ULABELS" :width="92" @change="setUnit2"></unit-select>
+					</view>
+
+					<view v-if="calc.needM">
+						<text class="lbl mt16">化学式</text>
+						<view :class="['fld', 'mt10', focus == 'formula' ? 'fld-on' : '']">
+							<input class="inp" :value="formula" placeholder="如 HCl" placeholder-class="ph" @input="onInput('formula', $event as UniInputEvent)" @focus="focus = 'formula'" @blur="blurField('formula')" />
+							<text class="mline ml8">{{ calc.mLine }}</text>
+						</view>
+					</view>
+
+					<view v-if="stockName.length > 0" class="stock mt10">
+						<image class="ico16" src="/static/icons/check-1F5FAD.svg"></image>
+						<text class="stock-t">{{ stockName }}</text>
+					</view>
+
+					<view class="sublbl mt16">
+						<text class="lbl">目标体积 V</text>
+						<text class="sub">2</text>
+					</view>
+					<view :class="['fld', 'fld-lg', 'mt10', focus == 'v2' ? 'fld-on' : '']">
+						<input :focus="focus == 'v2'" class="inp inp-lg" type="digit" :value="v2" @input="onInput('v2', $event as UniInputEvent)" @focus="focus = 'v2'" @blur="blurField('v2')" />
+						<text class="unit-ml ml8">mL</text>
+						<view v-if="focus != 'v2'" class="lp-cover" @touchstart="lpStart('v2', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('v2')"></view>
+					</view>
+					<view class="row mt10">
+						<view v-for="(fv, i) in FLASKS" :key="i" :class="['chip', i > 0 ? 'ml6' : '', v2Num == fv ? 'chip-on' : '']" @click="setV2(fv.toFixed(0))">
+							<text :class="['chip-t', v2Num == fv ? 'chip-t-on' : '']">{{ fv.toFixed(0) }}</text>
+						</view>
+					</view>
+				</view>
+
+				<!-- 最小准确移液量 -->
+				<view class="card mt14">
+					<text class="h2">最小准确移液量</text>
+					<view class="row mt10">
+						<view v-for="(p, i) in PIPS" :key="i" :class="['chip', i > 0 ? 'ml6' : '', pip == p ? 'chip-on' : '']" @click="setPip(p)">
+							<text :class="['chip-t', pip == p ? 'chip-t-on' : '']">{{ PIP_LABELS[i] }}</text>
+						</view>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+
+		<dock-card :dock="calc.dock"></dock-card>
+		<nav-bar active="dilu" :bottom="navBottom" @go="goTab"></nav-bar>
+
+		<scan-sheet v-if="scanOpen" class="overlay" kind="stock" @apply="applyScan" @close="scanOpen = false"></scan-sheet>
+		<dial-knob v-if="dialOpen" ref="dialRef" class="overlay" :value="dialValue" :spec="dialSpec" :label="dialLabel" :unit="dialUnit"
+			:result="dialResult" :anchor-y="dialY" :dragging="dialDrag" @change="dialChange" @close="dialClose"></dial-knob>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { pretty } from '@/common/chem.uts'
+	import { DASH, sig, num, fmtV, massAuto, molAuto, volAuto, VolText } from '@/common/fmt.uts'
+	import { Dock, Fact, Tag, DialSpec, ScanValue, F, T, concSpec, volSpec } from '@/common/types.uts'
+	import { resolveFormula, Resolved } from '@/common/resolve.uts'
+	import { loadState, saveState } from '@/common/store.uts'
+	import { DEMO } from '@/common/config.uts'
+
+	defineOptions({ styleIsolation: 'app' })
+
+	const emit = defineEmits(['go'])
+
+	type DiluOut = {
+		needM : boolean
+		mLine : string
+		dock : Dock
+	}
+
+	const UIDS = ['M', 'mM', 'uM', 'gL', 'pct', 'x']
+	const ULABELS = ['mol/L', 'mmol/L', 'µmol/L', 'g/L', '% w/v', '倍 ×']
+	// 单位族：molar（mol/L 倍数）、mass（g/L 倍数）、times（倍数）
+	const UMOLAR = [1, 0.001, 0.000001, 0, 0, 0]
+	const UMASS = [0, 0, 0, 1, 10, 0]
+	const UUNIT = ['mol/L', 'mmol/L', 'µmol/L', 'g/L', '% w/v', '×']
+	const FLASKS = [25, 50, 100, 250, 500, 1000]
+	const PIPS = [1, 0.1, 0.01]
+	const PIP_LABELS = ['1 mL', '0.1 mL', '10 µL']
+
+	const win = uni.getWindowInfo()
+	const topPad = Math.max(56, win.statusBarHeight + 9)
+	const navBottom = Math.max(26, win.safeAreaInsets.bottom)
+
+	const unit1 = ref('M')
+	const unit2 = ref('M')
+	const formula = ref('')
+	const c1 = ref('')
+	const c2 = ref('')
+	const v2 = ref('')
+	const pip = ref(0.1)
+	const stockName = ref('')
+	const scanOpen = ref(false)
+	const focus = ref('')
+
+	if (DEMO) {
+		c1.value = '2.000'
+		c2.value = '0.1000'
+		v2.value = '250'
+	} else {
+		const s = loadState('dilu')
+		if (s != null) {
+			unit1.value = s.getString('unit1', 'M')
+			unit2.value = s.getString('unit2', 'M')
+			formula.value = s.getString('formula', '')
+			c1.value = s.getString('c1', '')
+			c2.value = s.getString('c2', '')
+			v2.value = s.getString('v2', '')
+			pip.value = s.getNumber('pip', 0.1)
+			stockName.value = s.getString('stockName', '')
+		}
+	}
+	function persist() {
+		if (DEMO) return
+		saveState('dilu', { unit1: unit1.value, unit2: unit2.value, formula: formula.value, c1: c1.value, c2: c2.value, v2: v2.value, pip: pip.value, stockName: stockName.value } as UTSJSONObject)
+	}
+
+	function setVal(k : string, v : string) {
+		if (k == 'c1') {
+			c1.value = v
+			stockName.value = ''
+		} else if (k == 'c2') c2.value = v
+		else if (k == 'v2') v2.value = v
+		else if (k == 'formula') formula.value = v
+		persist()
+	}
+	function getVal(k : string) : string {
+		if (k == 'c1') return c1.value
+		if (k == 'c2') return c2.value
+		if (k == 'v2') return v2.value
+		return ''
+	}
+	function onInput(k : string, e : UniInputEvent) {
+		setVal(k, e.detail.value)
+	}
+	function setUnit1(id : string) {
+		unit1.value = id
+		persist()
+	}
+	function setUnit2(id : string) {
+		unit2.value = id
+		persist()
+	}
+	function setV2(v : string) {
+		v2.value = v
+		persist()
+	}
+	function setPip(p : number) {
+		pip.value = p
+		persist()
+	}
+	function goTab(t : string) {
+		emit('go', t)
+	}
+
+	function openScan() {
+		uni.hideKeyboard()
+		scanOpen.value = true
+	}
+	function applyScan(v : ScanValue) {
+		if (v.conc.length > 0) c1.value = v.conc
+		if (UIDS.indexOf(v.unit) >= 0) unit1.value = v.unit
+		if (v.formula.length > 0) formula.value = v.formula
+		stockName.value = v.name.length > 0 ? v.name : '已识别原液'
+		scanOpen.value = false
+		persist()
+	}
+
+	function fam(i : number) : string {
+		return UMOLAR[i] > 0 ? 'molar' : (UMASS[i] > 0 ? 'mass' : 'times')
+	}
+	// 把 C（单位 a）换算到单位 b；跨 mol ↔ 质量需要摩尔质量 M；倍数只能对倍数
+	function convert(c : number, a : number, b : number, M : number) : number | null {
+		const fa = fam(a), fb = fam(b)
+		if (fa == fb) {
+			if (fa == 'molar') return c * UMOLAR[a] / UMOLAR[b]
+			if (fa == 'mass') return c * UMASS[a] / UMASS[b]
+			return c
+		}
+		if (fa == 'times' || fb == 'times' || !(M > 0)) return null
+		if (fa == 'molar') return c * UMOLAR[a] * M / UMASS[b]
+		return c * UMASS[a] / M / UMOLAR[b]
+	}
+	const res = computed(() : Resolved => resolveFormula(formula.value))
+	const v2Num = computed(() : number => {
+		const v = num(v2.value)
+		return v == null ? -1 : v
+	})
+
+	const calc = computed(() : DiluOut => {
+		const i1 = Math.max(0, UIDS.indexOf(unit1.value)), i2 = Math.max(0, UIDS.indexOf(unit2.value))
+		const r = res.value
+		const M = r.status == 'ok' ? r.M : 0
+		const cross = fam(i1) != fam(i2)
+		const needM = cross && fam(i1) != 'times' && fam(i2) != 'times'
+		const C1q = num(c1.value), C2q = num(c2.value), V2q = num(v2.value)
+		const C1 : number = C1q == null ? 0 : C1q
+		const C2 : number = C2q == null ? 0 : C2q
+		const V2 : number = V2q == null ? 0 : V2q
+		const o : DiluOut = { needM: needM, mLine: M > 0 ? M.toFixed(2) + ' g/mol' : '', dock: { verb: '移取原液', subject: '', value: DASH, unit: 'mL', tags: [] as Tag[], facts: [] as Fact[], hasWarn: false, warn: '' } as Dock }
+		const dock = o.dock
+		dock.subject = stockName.value.length > 0 ? stockName.value : (formula.value.trim().length > 0 ? pretty(formula.value.trim()) : '')
+		function warn(t : string) {
+			dock.hasWarn = true
+			dock.warn = t
+		}
+		const C1t : number | null = C1 > 0 && !(cross && !needM) && !(needM && !(M > 0)) ? convert(C1, i1, i2, M) : null
+		const c1t : number = C1t == null ? 0 : C1t
+		const ok = C1 > 0 && C2 > 0 && V2 > 0 && C1t != null && c1t >= C2
+		const V1 : number = ok ? C2 * V2 / c1t : 0
+		const Wt : number = ok ? V2 - V1 : 0
+		const D : number = ok ? c1t / C2 : 0
+		let solute = DASH
+		if (C2 > 0 && V2 > 0) {
+			if (UMOLAR[i2] > 0) solute = molAuto(C2 * UMOLAR[i2] * V2 / 1000)
+			else if (UMASS[i2] > 0) solute = massAuto(C2 * UMASS[i2] * V2 / 1000)
+		}
+		dock.facts = [
+			F('加水', ok ? '≈' + fmtV(Wt) + ' mL' : DASH, false),
+			F('定容体积', V2 > 0 ? sig(V2, 6) + ' mL' : DASH, false),
+			F('稀释倍数', ok ? sig(D, 4) + '×' : DASH, false),
+			F('原液 : 水', ok && D > 1 ? '1 : ' + sig(D - 1, 3) : DASH, false),
+			F('溶质', solute, false),
+			unit1.value != unit2.value ? F('C₁ 折算', C1t != null ? sig(C1t, 4) + ' ' + ULABELS[i2] : DASH, false) : F('原液 C₁', C1 > 0 ? sig(C1, 4) + ' ' + ULABELS[i1] : DASH, false)
+		]
+		if (!(C1 > 0 && C2 > 0 && V2 > 0)) {
+			warn('请输入原液浓度、目标浓度和体积')
+			return o
+		}
+		if (cross && !needM) {
+			warn('倍数单位只能与倍数换算')
+			return o
+		}
+		if (needM && !(M > 0)) {
+			warn(r.status == 'pending' ? '正在查询化学式…' : '跨单位换算需填化学式')
+			return o
+		}
+		if (C1t == null || C1t < C2) {
+			warn('原液浓度低于目标，无法通过稀释得到')
+			return o
+		}
+		const va : VolText = volAuto(V1)
+		dock.value = va.v
+		dock.unit = va.u
+		if (V1 < pip.value) {
+			dock.tags.push(T('低于最小移液', 'warn'))
+			warn('低于最小准确移液量 ' + PIP_LABELS[Math.max(0, PIPS.indexOf(pip.value))])
+		}
+		return o
+	})
+
+	// —— 长按唤出旋钮 ——
+	const dialRef = ref<ComponentPublicInstance | null>(null)
+	const dialOpen = ref(false)
+	const dialKey = ref('')
+	const dialY = ref(430)
+	const dialDrag = ref(false)
+	let dialOrig = ''
+	let lpTimer = 0
+	let lpFired = false
+	let lpOn = false
+	let lpX = 0
+	let lpY = 0
+
+	function openDial(key : string, y : number) {
+		uni.hideKeyboard()
+		focus.value = ''
+		dialOrig = getVal(key)
+		dialKey.value = key
+		dialY.value = y
+		dialDrag.value = true
+		dialOpen.value = true
+		try {
+			uni.vibrateShort({ type: 'medium' } as VibrateShortOptions)
+		} catch (e) { }
+	}
+	function lpStart(key : string, e : UniTouchEvent) {
+		if (e.touches.length == 0 || dialOpen.value) return
+		lpFired = false
+		const t = e.touches[0]
+		lpX = t.clientX
+		lpY = t.clientY
+		lpOn = true
+		clearTimeout(lpTimer)
+		lpTimer = setTimeout(() => {
+			if (lpOn) {
+				lpOn = false
+				lpFired = true
+				openDial(key, lpY)
+			}
+		}, 450)
+	}
+	// 只清除自己的聚焦状态：切换输入框时旧输入框的 blur 晚于新输入框的聚焦
+	function blurField(k : string) {
+		if (focus.value == k) focus.value = ''
+	}
+	function tapField(k : string) {
+		if (lpFired) {
+			lpFired = false
+			return
+		}
+		focus.value = k
+	}
+	function lpMove(e : UniTouchEvent) {
+		if (e.touches.length == 0) return
+		const t = e.touches[0]
+		if (dialOpen.value && dialDrag.value) {
+			if (e.cancelable) e.preventDefault()
+			e.stopPropagation()
+			dialRef.value?.$callMethod('extMove', t.clientX, t.clientY)
+			return
+		}
+		if (lpOn && (Math.abs(t.clientX - lpX) > 8 || Math.abs(t.clientY - lpY) > 8)) {
+			clearTimeout(lpTimer)
+			lpOn = false
+		}
+	}
+	function lpEnd(e : UniTouchEvent) {
+		clearTimeout(lpTimer)
+		lpOn = false
+		if (dialOpen.value && dialDrag.value) {
+			dialDrag.value = false
+			if (e.changedTouches.length > 0) {
+				const t = e.changedTouches[0]
+				dialRef.value?.$callMethod('extUp', t.clientX, t.clientY)
+			}
+		}
+	}
+	function lpCancel(ev : UniTouchEvent) {
+		clearTimeout(lpTimer)
+		lpOn = false
+		if (dialOpen.value && dialDrag.value) {
+			dialDrag.value = false
+			dialRef.value?.$callMethod('extCancel')
+		}
+	}
+
+	const dialValue = computed(() : string => dialOpen.value ? getVal(dialKey.value) : '')
+	const dialLabel = computed(() : string => {
+		const k = dialKey.value
+		if (k == 'c1') return '原液 C₁'
+		if (k == 'c2') return '目标 C₂'
+		return '目标体积 V₂'
+	})
+	const dialUnit = computed(() : string => {
+		const k = dialKey.value
+		if (k == 'c1') return UUNIT[Math.max(0, UIDS.indexOf(unit1.value))]
+		if (k == 'c2') return UUNIT[Math.max(0, UIDS.indexOf(unit2.value))]
+		return 'mL'
+	})
+	const dialSpec = computed(() : DialSpec => dialKey.value == 'v2' ? volSpec(100) : concSpec(1))
+	const dialResult = computed(() : string => {
+		const d = calc.value.dock
+		return d.value != DASH ? '移取原液 ' + d.value + ' ' + d.unit : ''
+	})
+	function dialChange(v : string) {
+		if (dialOpen.value) setVal(dialKey.value, v)
+	}
+	function dialClose(commit : boolean) {
+		if (!dialOpen.value) return
+		if (!commit) setVal(dialKey.value, dialOrig)
+		dialOpen.value = false
+		dialDrag.value = false
+	}
+</script>
+
+<style>
+	.pane {
+		flex: 1;
+		background-color: #F3F4F1;
+	}
+
+	.scroller {
+		flex: 1;
+	}
+
+	.content {
+		padding: 56px 16px 20px 16px;
+	}
+
+	.header {
+		padding: 0 4px;
+	}
+
+	.mt10 {
+		margin-top: 10px;
+	}
+
+	.mt14 {
+		margin-top: 14px;
+	}
+
+	.mt16 {
+		margin-top: 16px;
+	}
+
+	.ml6 {
+		margin-left: 6px;
+	}
+
+	.ml8 {
+		margin-left: 8px;
+	}
+
+	.scan-t {
+		margin-left: 6px;
+		font-family: ns5;
+		font-size: 15px;
+		line-height: 21px;
+		color: #1F5FAD;
+	}
+
+	.sublbl {
+		flex-direction: row;
+		align-items: flex-start;
+		height: 21.6px;
+	}
+
+	.sub {
+		margin-top: 6.6px;
+		font-family: ns4;
+		font-size: 10.8333px;
+		line-height: 15px;
+		color: #4F555A;
+	}
+
+	.fld-sel {
+		padding: 0 6px 0 14px;
+	}
+
+	.ph {
+		color: #757575;
+	}
+
+	.mline {
+		font-family: px4;
+		font-size: 13px;
+		line-height: 19px;
+		color: #4F555A;
+	}
+
+	.stock {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.stock-t {
+		margin-left: 6px;
+		font-family: ns4;
+		font-size: 13px;
+		line-height: 19.5px;
+		color: #1F5FAD;
+	}
+
+	.unit-ml {
+		font-family: px4;
+		font-size: 14px;
+		line-height: 20px;
+		color: #4F555A;
+	}
+
+	.overlay {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+	}
+</style>

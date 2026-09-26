@@ -1,0 +1,161 @@
+// 多组分「反应与相容性检查」的 LLM 复核：通用 OpenAI 兼容接口（/chat/completions）
+// 离线或未配置时只用本地规则库；联网得到的结果按配方缓存到本地
+import { LLM, llmEnabled } from './config.uts'
+import { vlm, vlmReady, vlmChatUrl, applyProviderParams, providerHeaders } from './settings.uts'
+import { Warn } from './compat.uts'
+import { normF } from './chem.uts'
+
+export type MixComp = {
+	formula : string // 解析后的化学式
+	input : string // 用户输入（可能是名称）
+	name : string // 中文名
+	conc : string
+	unit : string
+}
+
+type LlmCb = (list : Warn[] | null, err : string) => void
+
+const CACHE_KEY = 'llm-mix-cache'
+const cache = new Map<string, string>() // key → JSON 字符串
+let cacheLoaded = false
+
+function loadCache() {
+	if (cacheLoaded) return
+	cacheLoaded = true
+	try {
+		const s = uni.getStorageSync(CACHE_KEY)
+		if (s != null && typeof s == 'string' && (s as string).length > 0) {
+			const o = JSON.parseObject(s as string)
+			if (o != null) {
+				const keys = UTSJSONObject.keys(o)
+				for (let i = 0; i < keys.length; i++) cache.set(keys[i], o.getString(keys[i], ''))
+			}
+		}
+	} catch (e) { }
+}
+
+function saveCache() {
+	const o = {} as UTSJSONObject
+	let n = 0
+	cache.forEach((v : string, k : string) => {
+		if (n < 200) o.set(k, v)
+		n++
+	})
+	uni.setStorageSync(CACHE_KEY, JSON.stringify(o))
+}
+
+export function mixKey(comps : MixComp[], vol : string) : string {
+	const parts : string[] = []
+	for (let i = 0; i < comps.length; i++) parts.push(normF(comps[i].formula) + '@' + comps[i].conc + comps[i].unit)
+	parts.sort()
+	return parts.join('|') + '#' + vol
+}
+
+const SYSTEM = '你是化学实验室的配液安全顾问。用户要把多种试剂溶解在同一份水溶液里（多组分配制）。' +
+	'请判断这些组分混合后可能出现的问题：沉淀、气体、酸碱中和、氧化还原、配位显色、水解、放热、pH 漂移、溶解度不足、加料顺序、灭菌/储存稳定性、安全风险等。' +
+	'结合各组分的实际浓度判断是否真的会发生（例如稀溶液中可共存的只给「提示」）。不要编造不存在的风险；没有问题就返回空数组。'
+
+const FORMAT = '只输出 JSON，不要任何其他文字，格式：{"warnings":[{"level":"高|中|提示","title":"简短结论，如 Ca²⁺ + 磷酸盐 → 磷酸钙沉淀",' +
+	'"detail":"原因和具体建议（中文，1~3 句）","members":["涉及组分的化学式，必须原样取自输入的 formula 字段"],"pairs":"如 CaCl₂ × Na₂HPO₄"}]}。' +
+	'level 含义：高=会明显反应/有毒/危险，必须分开；中=可能析出或改变浓度，需要注意加料顺序；提示=一般可共存但需留意。按严重程度排序。'
+
+function buildUser(comps : MixComp[], vol : string, rules : Warn[]) : string {
+	const arr : UTSJSONObject[] = []
+	for (let i = 0; i < comps.length; i++) {
+		const c = comps[i]
+		arr.push({ formula: c.formula, input: c.input, name: c.name, conc: c.conc, unit: c.unit } as UTSJSONObject)
+	}
+	const rl : UTSJSONObject[] = []
+	for (let i = 0; i < rules.length; i++) {
+		rl.push({ level: rules[i].level, title: rules[i].title, members: rules[i].members } as UTSJSONObject)
+	}
+	return '最终体积（mL）：' + vol + '\n组分：' + JSON.stringify(arr) + '\n本地规则库的初步结果（供参考，可修正或补充）：' + JSON.stringify(rl) + '\n' + FORMAT
+}
+
+function parseWarns(content : string) : Warn[] | null {
+	const a = content.indexOf('{')
+	const b = content.lastIndexOf('}')
+	if (a < 0 || b <= a) return null
+	const o = JSON.parseObject(content.substring(a, b + 1))
+	if (o == null) return null
+	const ws = o.getArray<UTSJSONObject>('warnings')
+	if (ws == null) return null
+	const out : Warn[] = []
+	for (let i = 0; i < ws.length; i++) {
+		const w = ws[i]
+		let level = w.getString('level', '提示')
+		if (level != '高' && level != '中' && level != '提示') level = '提示'
+		const mem : string[] = []
+		const ma = w.getArray<string>('members')
+		if (ma != null) {
+			for (let k = 0; k < ma.length; k++) mem.push(normF(ma[k]))
+		}
+		out.push({ level: level, title: w.getString('title', ''), detail: w.getString('detail', ''), pairs: w.getString('pairs', ''), members: mem } as Warn)
+	}
+	return out
+}
+
+export function llmCached(key : string) : Warn[] | null {
+	loadCache()
+	const s = cache.get(key)
+	if (s == null || s.length == 0) return null
+	return parseWarns(s)
+}
+
+// 设置页的视觉模型优先（同一个模型同时负责 OCR 和建议），否则用 config.uts 里的 LLM
+export function suggestEnabled() : boolean {
+	return (vlmReady() && vlm.suggestOn) || llmEnabled()
+}
+
+export function analyzeMix(comps : MixComp[], vol : string, rules : Warn[], cb : LlmCb) {
+	if (!suggestEnabled()) {
+		cb(null, 'LLM 未配置')
+		return
+	}
+	loadCache()
+	const key = mixKey(comps, vol)
+	const useVlm = vlmReady() && vlm.suggestOn
+	const base = useVlm ? vlm.baseUrl : LLM.baseUrl
+	const apiKey = useVlm ? vlm.apiKey : LLM.apiKey
+	const url = vlmChatUrl(base)
+	const header = providerHeaders(base, apiKey)
+	const body = {
+		model: useVlm ? vlm.model : LLM.model,
+		temperature: 0.2,
+		messages: [
+			{ role: 'system', content: SYSTEM } as UTSJSONObject,
+			{ role: 'user', content: buildUser(comps, vol, rules) } as UTSJSONObject
+		]
+	} as UTSJSONObject
+	// 相容性判断需要一点推理，但不必深度思考；要求 JSON 输出
+	applyProviderParams(body, base, 'suggest')
+	uni.request<UTSJSONObject>({
+		url: url,
+		method: 'POST',
+		header: header,
+		data: body,
+		timeout: 90000,
+		success: (res : RequestSuccess<UTSJSONObject>) => {
+			const d = res.data
+			if (res.statusCode != 200 || d == null) {
+				cb(null, 'LLM 返回错误')
+				return
+			}
+			const ch = d.getArray<UTSJSONObject>('choices')
+			const msg = ch == null || ch.length == 0 ? null : ch[0].getJSON('message')
+			const content = msg == null ? '' : msg.getString('content', '')
+			console.log('LLM suggest ok', d.getString('provider', ''))
+			const list = parseWarns(content)
+			if (list == null) {
+				cb(null, 'LLM 结果无法解析')
+				return
+			}
+			cache.set(key, content)
+			saveCache()
+			cb(list, '')
+		},
+		fail: (e : RequestFail) => {
+			cb(null, '网络不可用')
+		}
+	})
+}

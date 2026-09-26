@@ -1,0 +1,225 @@
+// 联网查询（离线库未命中时）：英文名 / CAS → PubChem，中文名 → Wikidata
+// 查到的结果（含未找到）写入本地缓存文件，之后离线也能用
+import { molarMass, normF } from './chem.uts'
+import { dbTick } from './db.uts'
+
+export type OnlineHit = {
+	f : string
+	zh : string
+	en : string
+	M : number
+	t : number // 查询时间（ms）
+}
+
+const CACHE_FILE = 'chem-lookup-cache.json'
+const MISS_TTL = 3 * 24 * 3600 * 1000 // 未找到的结果 3 天后可重试
+
+const cache = new Map<string, OnlineHit>()
+const pending = new Set<string>()
+let loaded = false
+let saveTimer = 0
+
+function cachePath() : string {
+	return uni.env.USER_DATA_PATH + '/' + CACHE_FILE
+}
+
+function ensureLoaded() {
+	if (loaded) return
+	loaded = true
+	try {
+		const fs = uni.getFileSystemManager()
+		const txt = fs.readFileSync(cachePath(), 'utf-8') as string
+		const o = JSON.parseObject(txt)
+		if (o == null) return
+		const keys = UTSJSONObject.keys(o)
+		for (let i = 0; i < keys.length; i++) {
+			const h = o.getJSON(keys[i])
+			if (h == null) continue
+			cache.set(keys[i], {
+				f: h.getString('f', ''), zh: h.getString('zh', ''), en: h.getString('en', ''),
+				M: h.getNumber('M', 0), t: h.getNumber('t', 0)
+			} as OnlineHit)
+		}
+	} catch (e) {
+		// 首次运行没有缓存文件
+	}
+}
+
+function scheduleSave() {
+	if (saveTimer != 0) clearTimeout(saveTimer)
+	saveTimer = setTimeout(() => {
+		saveTimer = 0
+		const o = {} as UTSJSONObject
+		cache.forEach((v : OnlineHit, k : string) => {
+			o.set(k, { f: v.f, zh: v.zh, en: v.en, M: v.M, t: v.t } as UTSJSONObject)
+		})
+		try {
+			uni.getFileSystemManager().writeFileSync(cachePath(), JSON.stringify(o), 'utf-8')
+		} catch (e) {
+			console.log('save cache failed', e)
+		}
+	}, 800)
+}
+
+function keyOf(q : string) : string {
+	return q.trim().toLowerCase()
+}
+
+function hasCJK(s : string) : boolean {
+	for (let i = 0; i < s.length; i++) {
+		const c = s.charCodeAt(i)!
+		if (c >= 0x3400 && c <= 0x9fff) return true
+	}
+	return false
+}
+
+function put(k : string, h : OnlineHit) {
+	pending.delete(k)
+	cache.set(k, h)
+	scheduleSave()
+	dbTick.value = dbTick.value + 1
+}
+
+function miss(k : string) : OnlineHit {
+	return { f: '', zh: '', en: '', M: 0, t: Date.now() } as OnlineHit
+}
+
+// 同步取缓存；返回 null 表示没有缓存（此时若 fetch=true 会发起联网查询）
+export function onlineCached(q : string, fetch : boolean) : OnlineHit | null {
+	ensureLoaded()
+	const k = keyOf(q)
+	if (k.length == 0) return null
+	const h = cache.get(k)
+	if (h != null) {
+		if (h.f.length == 0 && Date.now() - h.t > MISS_TTL && fetch) {
+			cache.delete(k)
+		} else {
+			return h
+		}
+	}
+	if (fetch) lookup(q)
+	return null
+}
+
+export function onlinePending(q : string) : boolean {
+	return pending.has(keyOf(q))
+}
+
+function lookup(q : string) {
+	const k = keyOf(q)
+	if (pending.has(k)) return
+	pending.add(k)
+	if (hasCJK(q)) wikidataSearch(q, k)
+	else pubchem(q, k)
+}
+
+function pubchem(q : string, k : string) {
+	const url = 'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/' + encodeURIComponent(q.trim()) +
+		'/property/MolecularFormula,MolecularWeight,Title/JSON'
+	uni.request<UTSJSONObject>({
+		url: url,
+		method: 'GET',
+		timeout: 10000,
+		success: (res : RequestSuccess<UTSJSONObject>) => {
+			const d = res.data
+			if (res.statusCode != 200 || d == null) {
+				put(k, miss(k))
+				return
+			}
+			const pt = d.getJSON('PropertyTable')
+			const props = pt == null ? null : pt.getArray<UTSJSONObject>('Properties')
+			if (props == null || props.length == 0) {
+				put(k, miss(k))
+				return
+			}
+			const p = props[0]
+			const f = p.getString('MolecularFormula', '')
+			let M = 0
+			const mwAny = p.get('MolecularWeight')
+			if (mwAny != null) {
+				if (typeof mwAny == 'string') M = parseFloat(mwAny as string)
+				else M = mwAny as number
+			}
+			const mm = molarMass(f)
+			if (mm != null) M = mm
+			put(k, { f: f, zh: '', en: p.getString('Title', q), M: M, t: Date.now() } as OnlineHit)
+		},
+		fail: (ev : RequestFail) => {
+			pending.delete(k)
+		}
+	})
+}
+
+function wikidataSearch(q : string, k : string) {
+	const url = 'https://www.wikidata.org/w/api.php?action=wbsearchentities&format=json&language=zh&uselang=zh&type=item&limit=5&search=' +
+		encodeURIComponent(q.trim())
+	uni.request<UTSJSONObject>({
+		url: url,
+		method: 'GET',
+		timeout: 10000,
+		header: { 'User-Agent': 'ChemCalc-uniappx/1.0' } as UTSJSONObject,
+		success: (res : RequestSuccess<UTSJSONObject>) => {
+			const d = res.data
+			const arr = d == null ? null : d.getArray<UTSJSONObject>('search')
+			if (arr == null || arr.length == 0) {
+				put(k, miss(k))
+				return
+			}
+			const ids : string[] = []
+			for (let i = 0; i < arr.length; i++) ids.push(arr[i].getString('id', ''))
+			wikidataEntities(q, k, ids)
+		},
+		fail: (ev : RequestFail) => {
+			pending.delete(k)
+		}
+	})
+}
+
+function wikidataEntities(q : string, k : string, ids : string[]) {
+	const url = 'https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=claims%7Clabels&languages=zh%7Czh-hans%7Czh-cn%7Cen&ids=' + ids.join('%7C')
+	uni.request<UTSJSONObject>({
+		url: url,
+		method: 'GET',
+		timeout: 10000,
+		header: { 'User-Agent': 'ChemCalc-uniappx/1.0' } as UTSJSONObject,
+		success: (res : RequestSuccess<UTSJSONObject>) => {
+			const d = res.data
+			const ents = d == null ? null : d.getJSON('entities')
+			if (ents == null) {
+				put(k, miss(k))
+				return
+			}
+			for (let i = 0; i < ids.length; i++) {
+				const e = ents.getJSON(ids[i])
+				if (e == null) continue
+				const claims = e.getJSON('claims')
+				const p274 = claims == null ? null : claims.getArray<UTSJSONObject>('P274')
+				if (p274 == null || p274.length == 0) continue
+				const ms = p274[0].getJSON('mainsnak')
+				const dv = ms == null ? null : ms.getJSON('datavalue')
+				const raw = dv == null ? '' : dv.getString('value', '')
+				const f = normF(raw)
+				const M = molarMass(f)
+				if (M == null) continue
+				const labels = e.getJSON('labels')
+				let zh = ''
+				let en = ''
+				if (labels != null) {
+					const langs = ['zh-hans', 'zh-cn', 'zh']
+					for (let j = 0; j < langs.length && zh.length == 0; j++) {
+						const l = labels.getJSON(langs[j])
+						if (l != null) zh = l.getString('value', '')
+					}
+					const le = labels.getJSON('en')
+					if (le != null) en = le.getString('value', '')
+				}
+				put(k, { f: f, zh: zh, en: en, M: M, t: Date.now() } as OnlineHit)
+				return
+			}
+			put(k, miss(k))
+		},
+		fail: (ev : RequestFail) => {
+			pending.delete(k)
+		}
+	})
+}

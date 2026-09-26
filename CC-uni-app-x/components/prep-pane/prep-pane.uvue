@@ -1,0 +1,755 @@
+<template>
+	<view class="pane">
+		<scroll-view class="scroller" direction="vertical" :show-scrollbar="false">
+			<view class="content" :style="{ paddingTop: topPad + 'px' }">
+				<view class="header">
+					<text class="h1">配制溶液</text>
+					<!-- 模型设置入口（绝对定位，不改变设计稿布局） -->
+					<view class="gear" @click="openSettings">
+						<image class="gear-ic" src="/static/icons/gear-4F555A.svg"></image>
+						<view v-if="upd.hasUpdate || upd.unread > 0" class="gear-dot"></view>
+					</view>
+				</view>
+
+				<!-- 试剂形态 -->
+				<view class="seg">
+					<view :class="['seg-b', mode == 'solid' ? 'seg-on' : '']" @click="setMode('solid')">
+						<text :class="['seg-t', mode == 'solid' ? 'seg-t-on' : '']">固体称量</text>
+					</view>
+					<view :class="['seg-b', 'seg-gap', mode == 'liquid' ? 'seg-on' : '']" @click="setMode('liquid')">
+						<text :class="['seg-t', mode == 'liquid' ? 'seg-t-on' : '']">液体试剂</text>
+					</view>
+				</view>
+
+				<!-- 试剂 -->
+				<view class="card mt14">
+					<view class="row jsb aic">
+						<text class="h2">试剂</text>
+						<view class="scan-btn" @click="openScan">
+							<image class="ico20" src="/static/icons/scan-1F5FAD.svg"></image>
+							<text class="scan-t">扫描标签</text>
+						</view>
+					</view>
+					<view v-if="filled" class="filled">
+						<image class="ico16" src="/static/icons/check-1F5FAD.svg"></image>
+						<text class="filled-t">已从标签填入</text>
+					</view>
+					<view class="mt14">
+						<text class="lbl">化学式</text>
+						<view :class="['fld', 'mt6', focus == 'formula' ? 'fld-on' : '']">
+							<input class="inp" :value="cur.formula" placeholder="如 NaCl、CuSO4·5H2O" placeholder-class="ph"
+								@input="onInput('formula', $event as UniInputEvent)" @focus="focus = 'formula'" @blur="blurField('formula')" />
+						</view>
+						<view v-if="res.status == 'ok'" class="mline">
+							<text class="lbl">{{ '摩尔质量 ' }}<text class="strong">{{ out.mText }}</text><text class="lbl">{{ ' g/mol' }}</text></text>
+						</view>
+						<text v-if="res.status == 'bad'" class="bad mt6">无法识别该化学式</text>
+					</view>
+
+					<view v-if="mode == 'solid'" class="mt14">
+						<text class="lbl">纯度（标签含量）</text>
+						<view :class="['fld', 'mt6', focus == 'purity' ? 'fld-on' : '']">
+							<input :focus="focus == 'purity'" class="inp" type="digit" :value="cur.purity" @input="onInput('purity', $event as UniInputEvent)" @focus="focus = 'purity'" @blur="blurField('purity')" />
+							<text class="unit15">%</text>
+							<view v-if="focus != 'purity'" class="lp-cover" @touchstart="lpStart('purity', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('purity')"></view>
+						</view>
+					</view>
+
+					<view v-if="mode == 'liquid'" class="mt14">
+						<view class="row">
+							<view class="f1 col0">
+								<text class="lbl">质量分数 w</text>
+								<view :class="['fld', 'fld12', 'mt6', focus == 'w' ? 'fld-on' : '']">
+									<input :focus="focus == 'w'" class="inp" type="digit" :value="cur.w" @input="onInput('w', $event as UniInputEvent)" @focus="focus = 'w'" @blur="blurField('w')" />
+									<text class="unit15 ml6">%</text>
+									<view v-if="focus != 'w'" class="lp-cover" @touchstart="lpStart('w', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('w')"></view>
+								</view>
+							</view>
+							<view class="f1 col0 ml10">
+								<text class="lbl">密度 ρ</text>
+								<view :class="['fld', 'fld12', 'mt6', focus == 'rho' ? 'fld-on' : '']">
+									<input :focus="focus == 'rho'" class="inp" type="digit" :value="cur.rho" @input="onInput('rho', $event as UniInputEvent)" @focus="focus = 'rho'" @blur="blurField('rho')" />
+									<text class="unit14 ml6">g/mL</text>
+									<view v-if="focus != 'rho'" class="lp-cover" @touchstart="lpStart('rho', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('rho')"></view>
+								</view>
+							</view>
+						</view>
+						<text class="lbl mt8">{{ '折合原液浓度约 ' }}<text class="strong">{{ out.cStockText }}</text><text class="lbl">{{ ' mol/L' }}</text></text>
+					</view>
+				</view>
+
+				<!-- 目标溶液 -->
+				<view class="card mt14">
+					<text class="lbl">目标浓度</text>
+					<view :class="['fld', 'fld-lg', 'mt10', focus == 'conc' ? 'fld-on' : '']">
+						<input :focus="focus == 'conc'" class="inp inp-lg" type="digit" :value="cur.conc" @input="onInput('conc', $event as UniInputEvent)" @focus="focus = 'conc'" @blur="blurField('conc')" />
+						<view v-if="focus != 'conc'" class="lp-cover" @touchstart="lpStart('conc', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('conc')"></view>
+						<unit-select class="ml8" :value="cur.unit" :ids="UNIT_IDS" :labels="UNIT_LABELS" :width="92" @change="onUnit"></unit-select>
+					</view>
+					<text class="lbl mt16">目标体积</text>
+					<view :class="['fld', 'fld-lg', 'mt10', focus == 'vol' ? 'fld-on' : '']">
+						<input :focus="focus == 'vol'" class="inp inp-lg" type="digit" :value="cur.vol" @input="onInput('vol', $event as UniInputEvent)" @focus="focus = 'vol'" @blur="blurField('vol')" />
+						<text class="unit-ml ml8">mL</text>
+						<view v-if="focus != 'vol'" class="lp-cover" @touchstart="lpStart('vol', $event as UniTouchEvent)" @touchmove="lpMove" @touchend="lpEnd" @touchcancel="lpCancel" @click="tapField('vol')"></view>
+					</view>
+					<view class="row mt10">
+						<view v-for="(fv, i) in FLASKS" :key="i" :class="['chip', i > 0 ? 'ml6' : '', volNum == fv ? 'chip-on' : '']" @click="setField('vol', fv.toFixed(0))">
+							<text :class="['chip-t', volNum == fv ? 'chip-t-on' : '']">{{ fv.toFixed(0) }}</text>
+						</view>
+					</view>
+				</view>
+
+				<!-- 天平 -->
+				<view v-if="mode == 'solid'" class="card mt14">
+					<view class="row jsb baseline">
+						<text class="h2">天平</text>
+						<text class="lbl">{{ '最小称量 ' }}<text class="strong">{{ out.mMinText }}</text><text class="lbl">{{ ' g' }}</text></text>
+					</view>
+					<text class="lbl mt10">精度（g）</text>
+					<view class="row mt10">
+						<view v-for="(d, i) in PRECS" :key="i" :class="['chip', i > 0 ? 'ml6' : '', prec == d ? 'chip-on' : '']" @click="setPrec(d)">
+							<text :class="['chip-t', prec == d ? 'chip-t-on' : '']">{{ PREC_LABELS[i] }}</text>
+						</view>
+					</view>
+					<text class="lbl mt10">允许称量误差</text>
+					<view class="row mt10">
+						<view v-for="(t, i) in TOLS" :key="i" :class="['chip', i > 0 ? 'ml6' : '', tol == t ? 'chip-on' : '']" @click="setTol(t)">
+							<text :class="['chip-t', tol == t ? 'chip-t-on' : '']">{{ TOL_LABELS[i] }}</text>
+						</view>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+
+		<dock-card :dock="out.dock"></dock-card>
+		<nav-bar active="prep" :bottom="navBottom" @go="goTab"></nav-bar>
+
+		<scan-sheet v-if="scanOpen" class="overlay" :kind="mode" @apply="applyScan" @close="scanOpen = false"></scan-sheet>
+		<dial-knob v-if="dialOpen" ref="dialRef" class="overlay" :value="dialValue" :spec="dialSpec" :label="dialLabel" :unit="dialUnit"
+			:result="dialResult" :anchor-y="dialY" :dragging="dialDrag" @change="dialChange" @close="dialClose"></dial-knob>
+	</view>
+</template>
+
+<script setup lang="uts">
+	import { molarMass, pretty, normF } from '@/common/chem.uts'
+	import { DASH, sig, num, fmtV, fmtPct, massAuto, molAuto, concAuto, volAuto, VolText } from '@/common/fmt.uts'
+	import { Dock, Fact, Tag, DialSpec, ScanValue, F, T, concSpec, volSpec, linSpec } from '@/common/types.uts'
+	import { resolveFormula, Resolved } from '@/common/resolve.uts'
+	import { loadState, saveState } from '@/common/store.uts'
+	import { DEMO } from '@/common/config.uts'
+	import { upd } from '@/common/update.uts'
+
+	defineOptions({ styleIsolation: 'app' })
+
+	const emit = defineEmits(['go'])
+
+	type Fields = {
+		name : string
+		formula : string
+		purity : string
+		w : string
+		rho : string
+		conc : string
+		unit : string
+		vol : string
+	}
+
+	type PrepOut = {
+		mText : string
+		cStockText : string
+		mMinText : string
+		dock : Dock
+	}
+
+	const UNIT_IDS = ['M', 'mM', 'gL', 'mgmL', 'pct']
+	const UNIT_LABELS = ['mol/L', 'mmol/L', 'g/L', 'mg/mL', '%']
+	// 各单位换算：molar → mol / (浓度 × mL)，mass → g / (浓度 × mL)
+	const UNIT_MOLAR = [0.001, 0.000001, 0, 0, 0]
+	const UNIT_MASS = [0, 0, 0.001, 0.001, 0.01]
+	const PRECS = [0.1, 0.01, 0.001, 0.0001]
+	const PREC_LABELS = ['0.1', '0.01', '0.001', '0.0001']
+	const PREC_DEC = [1, 2, 3, 4]
+	const TOLS = [0.001, 0.005, 0.01, 0.05]
+	const TOL_LABELS = ['0.1%', '0.5%', '1%', '5%']
+	const FLASKS = [25, 50, 100, 250, 500, 1000]
+	const ACIDS = ['HCl', 'H2SO4', 'HNO3', 'H3PO4', 'CH3COOH', 'HClO4', 'HBr', 'HF']
+
+	const win = uni.getWindowInfo()
+	const topPad = Math.max(56, win.statusBarHeight + 9)
+	const navBottom = Math.max(26, win.safeAreaInsets.bottom)
+
+	function blank() : Fields {
+		return { name: '', formula: '', purity: '', w: '', rho: '', conc: '', unit: 'M', vol: '' } as Fields
+	}
+
+	const mode = ref('solid')
+	const solid = reactive<Fields>(blank())
+	const liquid = reactive<Fields>(blank())
+	const prec = ref(0.001)
+	const tol = ref(0.01)
+	const filled = ref(false)
+	const scanOpen = ref(false)
+	const focus = ref('')
+
+	const cur = computed(() : Fields => mode.value == 'solid' ? solid : liquid)
+
+	// —— 状态持久化 ——
+	function fieldsFrom(o : UTSJSONObject | null, into : Fields) {
+		if (o == null) return
+		into.name = o.getString('name', '')
+		into.formula = o.getString('formula', '')
+		into.purity = o.getString('purity', '')
+		into.w = o.getString('w', '')
+		into.rho = o.getString('rho', '')
+		into.conc = o.getString('conc', '')
+		into.unit = o.getString('unit', 'M')
+		into.vol = o.getString('vol', '')
+	}
+	function fieldsTo(f : Fields) : UTSJSONObject {
+		return { name: f.name, formula: f.formula, purity: f.purity, w: f.w, rho: f.rho, conc: f.conc, unit: f.unit, vol: f.vol } as UTSJSONObject
+	}
+	const saved = DEMO ? null : loadState('prep')
+	if (DEMO) {
+		mode.value = 'solid'
+		solid.name = '硫酸铜（五水）'
+		solid.formula = 'CuSO4·5H2O'
+		solid.purity = '100'
+		solid.conc = '0.002'
+		solid.vol = '100'
+		liquid.name = '浓盐酸'
+		liquid.formula = 'HCl'
+		liquid.w = '37'
+		liquid.rho = '1.19'
+		liquid.conc = '0.1'
+		liquid.vol = '250'
+	}
+	if (saved != null) {
+		mode.value = saved.getString('mode', 'solid')
+		fieldsFrom(saved.getJSON('solid'), solid)
+		fieldsFrom(saved.getJSON('liquid'), liquid)
+		prec.value = saved.getNumber('d', 0.001)
+		tol.value = saved.getNumber('tol', 0.01)
+	}
+	function persist() {
+		if (DEMO) return
+		saveState('prep', { mode: mode.value, solid: fieldsTo(solid), liquid: fieldsTo(liquid), d: prec.value, tol: tol.value } as UTSJSONObject)
+	}
+
+	function setField(k : string, v : string) {
+		const c = cur.value
+		if (k == 'name') c.name = v
+		else if (k == 'formula') c.formula = v
+		else if (k == 'purity') c.purity = v
+		else if (k == 'w') c.w = v
+		else if (k == 'rho') c.rho = v
+		else if (k == 'conc') c.conc = v
+		else if (k == 'unit') c.unit = v
+		else if (k == 'vol') c.vol = v
+		filled.value = false
+		persist()
+	}
+	function getField(k : string) : string {
+		const c = cur.value
+		if (k == 'purity') return c.purity
+		if (k == 'w') return c.w
+		if (k == 'rho') return c.rho
+		if (k == 'conc') return c.conc
+		if (k == 'vol') return c.vol
+		if (k == 'formula') return c.formula
+		return ''
+	}
+
+	function onInput(k : string, e : UniInputEvent) {
+		setField(k, e.detail.value)
+	}
+	function onUnit(id : string) {
+		setField('unit', id)
+	}
+	function setMode(m : string) {
+		if (mode.value == m) return
+		mode.value = m
+		filled.value = false
+		persist()
+	}
+	function setPrec(d : number) {
+		prec.value = d
+		persist()
+	}
+	function setTol(t : number) {
+		tol.value = t
+		persist()
+	}
+	function goTab(t : string) {
+		emit('go', t)
+	}
+	function openSettings() {
+		uni.hideKeyboard()
+		uni.navigateTo({ url: '/pages/settings/settings' })
+	}
+
+	// —— 扫描 ——
+	function openScan() {
+		uni.hideKeyboard()
+		scanOpen.value = true
+	}
+	function applyScan(v : ScanValue) {
+		const c = cur.value
+		if (v.name.length > 0) c.name = v.name
+		if (v.formula.length > 0) c.formula = v.formula
+		if (mode.value == 'solid') {
+			if (v.purity.length > 0) c.purity = v.purity
+		} else {
+			if (v.w.length > 0) c.w = v.w
+			if (v.rho.length > 0) c.rho = v.rho
+		}
+		scanOpen.value = false
+		filled.value = true
+		persist()
+	}
+
+	// —— 计算（与设计稿 calc() 一致）——
+	const res = computed(() : Resolved => resolveFormula(cur.value.formula))
+	const volNum = computed(() : number => {
+		const v = num(cur.value.vol)
+		return v == null ? -1 : v
+	})
+
+	const out = computed(() : PrepOut => {
+		const isSolid = mode.value == 'solid'
+		const c = cur.value
+		const ui = Math.max(0, UNIT_IDS.indexOf(c.unit))
+		const molarU = UNIT_MOLAR[ui], massU = UNIT_MASS[ui]
+		const r = res.value
+		const M : number | null = r.status == 'ok' ? r.M : null
+		const cc = num(c.conc), v = num(c.vol)
+		const fmOK = M != null
+		const needM = molarU > 0
+		let pure : number | null = null
+		if (cc != null && v != null && cc > 0 && v > 0) {
+			if (molarU > 0) pure = M != null ? cc * molarU * v * M : null
+			else pure = cc * massU * v
+		}
+		const hasF = c.formula.trim().length > 0
+		const formulaTxt = hasF ? pretty(c.formula.trim()) : '溶质'
+		const volTxt = v != null && v > 0 ? sig(v, 6) + ' mL' : DASH
+		let molTxt = DASH
+		if (molarU > 0 && cc != null && v != null && cc > 0 && v > 0) molTxt = molAuto(cc * molarU * v)
+		else if (M != null && pure != null) molTxt = molAuto(pure / M)
+
+		const dock : Dock = { verb: isSolid ? '称取' : '量取', subject: formulaTxt, value: DASH, unit: isSolid ? 'g' : 'mL', tags: [] as Tag[], facts: [] as Fact[], hasWarn: false, warn: '' }
+		const o : PrepOut = { mText: M != null ? M.toFixed(2) : '—', cStockText: DASH, mMinText: '', dock: dock }
+		function warn(t : string) {
+			dock.hasWarn = true
+			dock.warn = t
+		}
+		function fWarn() {
+			warn(hasF ? (r.status == 'pending' ? '正在查询化学式…' : '化学式无法识别') : '请输入化学式')
+		}
+
+		if (isSolid) {
+			const d = prec.value, t = tol.value
+			const dec = PREC_DEC[Math.max(0, PRECS.indexOf(d))]
+			const mMin = 2 * d / t
+			o.mMinText = mMin.toFixed(Math.max(dec, 1))
+			let pur = num(c.purity)
+			if (pur == null || pur <= 0 || pur > 100) pur = 100
+			if (pur < 100) dock.subject = formulaTxt + ' · ' + sig(pur, 4) + '%'
+			const m = pure != null ? pure / (pur / 100) : null
+			const err = m != null && m > 0 ? 2 * d / m : null
+			let equiv = DASH
+			if (pure != null && v != null && v > 0) {
+				if (molarU > 0) equiv = sig(pure / v * 1000, 4) + ' g/L'
+				else equiv = M != null ? concAuto(pure / M / (v / 1000)) : DASH
+			}
+			dock.facts = [
+				F('定容体积', volTxt, false),
+				F('物质的量', molTxt, false),
+				F('摩尔质量', M != null ? M.toFixed(2) + ' g/mol' : DASH, false),
+				F('等效浓度', equiv, false),
+				F('理论质量', m != null ? massAuto(m) : DASH, false),
+				F('称量误差', err != null ? '≈' + fmtPct(err * 100) : DASH, err != null && err > t)
+			]
+			if (needM && !fmOK) {
+				fWarn()
+				return o
+			}
+			if (pure == null || m == null) {
+				warn('请输入目标浓度与体积')
+				return o
+			}
+			dock.value = m.toFixed(dec)
+			if (m < mMin) {
+				dock.tags.push(T('称量受限', 'warn'))
+				warn('低于最小称量 ' + o.mMinText + ' g')
+			}
+		} else {
+			const wq = num(c.w), rq = num(c.rho)
+			const w : number = wq == null ? 0 : wq
+			const rho : number = rq == null ? 0 : rq
+			const vv : number = v == null ? 0 : v
+			if (w > 0) dock.subject = formulaTxt + ' ' + sig(w, 4) + '%'
+			const okR = w > 0 && w <= 100 && rho > 0
+			const cStock : number | null = okR && M != null ? 1000 * rho * (w / 100) / M : null
+			o.cStockText = cStock != null ? sig(cStock, 4) : DASH
+			const Vr : number = okR && pure != null ? pure / ((w / 100) * rho) : -1
+			const okV = Vr > 0 && Vr < vv
+			const nf = normF(r.status == 'ok' ? r.formula : c.formula)
+			if (ACIDS.indexOf(nf) >= 0) dock.tags.push(T('酸入水', 'info'))
+			dock.facts = [
+				F('原液浓度', cStock != null ? concAuto(cStock) : DASH, false),
+				F('加水', okV ? '≈' + fmtV(vv - Vr) + ' mL' : DASH, false),
+				F('定容体积', volTxt, false),
+				F('物质的量', molTxt, false),
+				F('纯溶质', pure != null ? massAuto(pure) : DASH, false),
+				F('稀释倍数', okV ? sig(vv / Vr, 3) + '×' : DASH, false)
+			]
+			if (!fmOK && needM) {
+				fWarn()
+				return o
+			}
+			if (!okR) {
+				warn('请输入试剂的质量分数与密度')
+				return o
+			}
+			if (pure == null) {
+				warn('请输入目标浓度与体积')
+				return o
+			}
+			if (!okV) {
+				warn('目标浓度不低于试剂本身浓度，无法配制')
+				return o
+			}
+			const va : VolText = volAuto(Vr)
+			dock.value = va.v
+			dock.unit = va.u
+			if (Vr < 1) dock.tags.push(T('量取 < 1 mL', 'warn'))
+		}
+		return o
+	})
+
+	// —— 长按唤出旋钮 ——
+	const dialRef = ref<ComponentPublicInstance | null>(null)
+	const dialOpen = ref(false)
+	const dialKey = ref('')
+	const dialY = ref(430)
+	const dialDrag = ref(false)
+	let dialOrig = ''
+	let lpTimer = 0
+	let lpFired = false
+	let lpOn = false
+	let lpX = 0
+	let lpY = 0
+
+	function openDial(key : string, y : number) {
+		uni.hideKeyboard()
+		focus.value = ''
+		dialOrig = getField(key)
+		dialKey.value = key
+		dialY.value = y
+		dialDrag.value = true
+		dialOpen.value = true
+		try {
+			uni.vibrateShort({ type: 'medium' } as VibrateShortOptions)
+		} catch (e) { }
+	}
+	function lpStart(key : string, e : UniTouchEvent) {
+		if (e.touches.length == 0 || dialOpen.value) return
+		lpFired = false
+		const t = e.touches[0]
+		lpX = t.clientX
+		lpY = t.clientY
+		lpOn = true
+		clearTimeout(lpTimer)
+		lpTimer = setTimeout(() => {
+			if (lpOn) {
+				lpOn = false
+				lpFired = true
+				openDial(key, lpY)
+			}
+		}, 450)
+	}
+	// 只清除自己的聚焦状态：切换输入框时旧输入框的 blur 晚于新输入框的聚焦
+	function blurField(k : string) {
+		if (focus.value == k) focus.value = ''
+	}
+	function tapField(k : string) {
+		if (lpFired) {
+			lpFired = false
+			return
+		}
+		focus.value = k
+	}
+	function lpMove(e : UniTouchEvent) {
+		if (e.touches.length == 0) return
+		const t = e.touches[0]
+		if (dialOpen.value && dialDrag.value) {
+			if (e.cancelable) e.preventDefault()
+			e.stopPropagation()
+			dialRef.value?.$callMethod('extMove', t.clientX, t.clientY)
+			return
+		}
+		if (lpOn && (Math.abs(t.clientX - lpX) > 8 || Math.abs(t.clientY - lpY) > 8)) {
+			clearTimeout(lpTimer)
+			lpOn = false
+		}
+	}
+	function lpEnd(e : UniTouchEvent) {
+		clearTimeout(lpTimer)
+		lpOn = false
+		if (dialOpen.value && dialDrag.value) {
+			dialDrag.value = false
+			if (e.changedTouches.length > 0) {
+				const t = e.changedTouches[0]
+				dialRef.value?.$callMethod('extUp', t.clientX, t.clientY)
+			}
+		}
+	}
+	function lpCancel(ev : UniTouchEvent) {
+		clearTimeout(lpTimer)
+		lpOn = false
+		if (dialOpen.value && dialDrag.value) {
+			dialDrag.value = false
+			dialRef.value?.$callMethod('extCancel')
+		}
+	}
+
+	const dialValue = computed(() : string => dialOpen.value ? getField(dialKey.value) : '')
+	const dialLabel = computed(() : string => {
+		const k = dialKey.value
+		if (k == 'conc') return '目标浓度'
+		if (k == 'vol') return '目标体积'
+		if (k == 'purity') return '纯度（标签含量）'
+		if (k == 'w') return '质量分数 w'
+		if (k == 'rho') return '密度 ρ'
+		return ''
+	})
+	const dialUnit = computed(() : string => {
+		const k = dialKey.value
+		if (k == 'conc') return UNIT_LABELS[Math.max(0, UNIT_IDS.indexOf(cur.value.unit))]
+		if (k == 'vol') return 'mL'
+		if (k == 'rho') return 'g/mL'
+		return '%'
+	})
+	const dialSpec = computed(() : DialSpec => {
+		const k = dialKey.value
+		if (k == 'conc') return concSpec(0.1)
+		if (k == 'vol') return volSpec(100)
+		if (k == 'purity') return linSpec(1, 0.1, 50, 100, 99)
+		if (k == 'w') return linSpec(1, 0.1, 0.1, 100, 37)
+		return linSpec(0.1, 0.01, 0.5, 3, 1)
+	})
+	const dialResult = computed(() : string => {
+		const d = out.value.dock
+		return d.value != DASH ? d.verb + ' ' + d.value + ' ' + d.unit : ''
+	})
+	function dialChange(v : string) {
+		if (dialOpen.value) setField(dialKey.value, v)
+	}
+	function dialClose(commit : boolean) {
+		if (!dialOpen.value) return
+		if (!commit) setField(dialKey.value, dialOrig)
+		dialOpen.value = false
+		dialDrag.value = false
+	}
+</script>
+
+<style>
+	.pane {
+		flex: 1;
+		background-color: #F3F4F1;
+	}
+
+	.scroller {
+		flex: 1;
+	}
+
+	.content {
+		padding: 56px 16px 20px 16px;
+	}
+
+	.header {
+		position: relative;
+		padding: 0 4px;
+	}
+
+	.gear {
+		position: absolute;
+		right: -11px;
+		top: -4.5px;
+		width: 44px;
+		height: 44px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.gear-ic {
+		width: 22px;
+		height: 22px;
+	}
+
+	/* 有新版本或未读公告时齿轮右上角的小圆点 */
+	.gear-dot {
+		position: absolute;
+		left: 27px;
+		top: 8px;
+		width: 10px;
+		height: 10px;
+		border-radius: 5px;
+		border: 1.5px solid #F3F4F1;
+		background-color: #1F5FAD;
+	}
+
+	.mt6 {
+		margin-top: 6px;
+	}
+
+	.mt8 {
+		margin-top: 8px;
+	}
+
+	.mt10 {
+		margin-top: 10px;
+	}
+
+	.mt14 {
+		margin-top: 14px;
+	}
+
+	.mt16 {
+		margin-top: 16px;
+	}
+
+	.ml6 {
+		margin-left: 6px;
+	}
+
+	.ml8 {
+		margin-left: 8px;
+	}
+
+	.ml10 {
+		margin-left: 10px;
+	}
+
+	.col0 {
+		min-width: 0;
+	}
+
+	.baseline {
+		align-items: flex-end;
+	}
+
+	.seg {
+		margin-top: 14px;
+		flex-direction: row;
+		padding: 4px;
+		background-color: #E3E6E0;
+		border-radius: 12px;
+	}
+
+	.seg-b {
+		flex: 1;
+		height: 44px;
+		border-radius: 9px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.seg-gap {
+		margin-left: 4px;
+	}
+
+	.seg-on {
+		background-color: #FFFFFF;
+		box-shadow: 0 1px 3px rgba(22, 25, 27, 0.14);
+	}
+
+	.seg-t {
+		font-family: ns5;
+		font-size: 15px;
+		line-height: 21px;
+		color: #4F555A;
+	}
+
+	.seg-t-on {
+		color: #16191B;
+	}
+
+	.scan-t {
+		margin-left: 6px;
+		font-family: ns5;
+		font-size: 15px;
+		line-height: 21px;
+		color: #1F5FAD;
+	}
+
+	.filled {
+		margin-top: 10px;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.filled-t {
+		margin-left: 6px;
+		font-family: ns4;
+		font-size: 13px;
+		line-height: 19px;
+		color: #1F5FAD;
+	}
+
+	.ph {
+		color: #757575;
+	}
+
+	.mline {
+		margin-top: 6px;
+		padding: 2px 2px 0 2px;
+	}
+
+	.strong {
+		font-family: px6;
+		font-size: 13px;
+		color: #16191B;
+	}
+
+	.bad {
+		font-family: ns4;
+		font-size: 13px;
+		line-height: 19.5px;
+		color: #8A4B00;
+	}
+
+	.unit15 {
+		margin-left: 8px;
+		font-family: ns4;
+		font-size: 15px;
+		line-height: 21px;
+		color: #4F555A;
+	}
+
+	.unit14 {
+		font-family: ns4;
+		font-size: 14px;
+		line-height: 20px;
+		color: #4F555A;
+	}
+
+	.unit-ml {
+		font-family: px4;
+		font-size: 14px;
+		line-height: 20px;
+		color: #4F555A;
+	}
+
+	.fld12 {
+		padding: 0 12px;
+	}
+
+	.overlay {
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+	}
+</style>

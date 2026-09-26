@@ -1,0 +1,36 @@
+// 「化学式」输入框的解析：先按化学式算摩尔质量；否则按名称 / CAS 查离线库；再否则联网查（带缓存）
+import { molarMass } from './chem.uts'
+import { dbTick, zhNameOf, compoundByName, nameLookupDone } from './db.uts'
+import { onlineCached, onlinePending } from './online.uts'
+
+export type Resolved = {
+	status : string // empty | ok | pending | bad
+	formula : string // 可用于计算与相容性判断的化学式
+	M : number
+	zh : string // 中文名（可能为空）
+	byName : boolean // 输入的是名称而不是化学式
+}
+
+function mk(status : string, f : string, M : number, zh : string, byName : boolean) : Resolved {
+	return { status: status, formula: f, M: M, zh: zh, byName: byName } as Resolved
+}
+
+export function resolveFormula(text : string) : Resolved {
+	// 读取 dbTick 以便在异步查询完成后重新计算
+	const _tick = dbTick.value
+	const t = text.trim()
+	if (t.length == 0) return mk('empty', '', 0, '', false)
+	const M = molarMass(t)
+	if (M != null) return mk('ok', t, M, zhNameOf(t), false)
+	const c = compoundByName(t)
+	if (c != null) {
+		const m2 = molarMass(c.f)
+		const mm = m2 != null ? m2 : c.M
+		if (mm > 0) return mk('ok', c.f, mm, c.zh.length > 0 ? c.zh : t, true)
+	}
+	if (!nameLookupDone(t)) return mk('pending', '', 0, '', true)
+	const h = onlineCached(t, true)
+	if (h != null && h.M > 0) return mk('ok', h.f, h.M, h.zh.length > 0 ? h.zh : t, true)
+	if (onlinePending(t)) return mk('pending', '', 0, '', true)
+	return mk('bad', '', 0, '', false)
+}
